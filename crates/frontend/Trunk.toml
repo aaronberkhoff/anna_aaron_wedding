@@ -1,0 +1,26 @@
+[build]
+target = "index.html"
+# Output to workspace-root site/dist so Axum's ServeDir can find it.
+dist = "../../site/dist"
+public_url = "/"
+# Append content hashes to asset filenames for cache busting.
+filehash = true
+
+[watch]
+# Hot-reload watches both frontend source and shared types.
+watch = ["src", "../../crates/shared/src"]
+ignore = []
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 3000
+open = false
+# SPA mode: unmatched paths fall back to index.html (Leptos router handles them).
+# This is Trunk's default — no explicit flag needed.
+
+[tools]
+# Trunk will download these tools automatically if not present in PATH.
+# wasm-bindgen and wasm-opt versions should stay in sync with Cargo.toml.
+# Must exactly match the wasm-bindgen version resolved in Cargo.lock.
+# Run `grep 'name = "wasm-bindgen"' Cargo.lock -A 2` to verify after any update.
+wasm_bindgen = "0.2.108"

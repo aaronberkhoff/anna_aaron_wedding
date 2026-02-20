@@ -1,0 +1,6 @@
+# Workspace-level Cargo configuration.
+
+[target.wasm32-unknown-unknown]
+# erase_components speeds up Leptos 0.7 incremental compile times during dev.
+# It removes some Leptos component tracing — safe to remove for release.
+rustflags = ["--cfg", "erase_components"]

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anna &amp; Aaron's Wedding</title>
+    <meta name="description" content="Join us to celebrate the wedding of Anna and Aaron." />
+
+    <!--
+        Trunk processes all `data-trunk` directives below.
+        - rel="tailwind-css": Trunk runs the Tailwind CLI and injects the output stylesheet.
+        - rel="rust": Trunk compiles this crate to WASM and injects the loader script.
+        - rel="copy-file": Trunk copies static assets to dist/.
+    -->
+    <link data-trunk rel="tailwind-css" href="tailwind.css" />
+    <link data-trunk rel="icon" type="image/x-icon" href="public/favicon.ico" />
+
+    <!-- Trunk injects the WASM module loader here at build time -->
+    <link data-trunk rel="rust" data-wasm-opt="z" />
+</head>
+<body class="font-sans bg-champagne text-charcoal">
+    <!--
+        Leptos mounts the SPA here via mount_to_body().
+        This div is intentionally left empty — Leptos manages it entirely.
+    -->
+
+    <!--
+        D3.js / Sigma.js (optional, loaded only when seating chart is used).
+        Uncomment when implementing the seating visualization:
+
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+
+        Then call window.initSeatingChart(containerEl, data) from Rust via wasm-bindgen.
+    -->
+</body>
+</html>

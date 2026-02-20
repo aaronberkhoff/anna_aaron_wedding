@@ -1,0 +1,31 @@
+# Rust build artifacts
+/target
+
+# Cargo backup files
+**/*.rs.bk
+
+# Environment secrets — never commit
+.env
+*.env.local
+
+# Trunk frontend dist output
+/site/dist/
+
+# SQLite dev database files
+*.db
+*.db-shm
+*.db-wal
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# NOTE: Cargo.lock is intentionally NOT ignored.
+# This is a binary application (not a library), so Cargo.lock must be committed
+# to ensure reproducible builds across all environments.

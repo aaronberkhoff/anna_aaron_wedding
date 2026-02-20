@@ -1,0 +1,28 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+# Native-only crate. Never add wasm-bindgen or other WASM deps here.
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+dotenvy = { workspace = true }

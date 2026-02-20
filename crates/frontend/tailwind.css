@@ -1,0 +1,7 @@
+/* Tailwind v3 — used by Trunk's built-in Tailwind CLI integration.
+   Trunk downloads the Tailwind v3 standalone binary and processes this file.
+   Custom design tokens live in tailwind.config.js (v3 uses JS config, not @theme). */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

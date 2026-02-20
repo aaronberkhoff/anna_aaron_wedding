@@ -1,0 +1,44 @@
+name: Deploy
+
+# Deploy to Fly.io on every push to main.
+# CI must pass first — enforce this via branch protection rules:
+#   Settings → Branches → main → Require status checks → select "CI (native)" and "Check frontend (wasm32)"
+#
+# Alternatively, use workflow_run to trigger this only after CI succeeds:
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+
+    # Only deploy if the upstream CI workflow succeeded.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    # Prevent parallel deploys (e.g. if two commits land in quick succession).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false   # Don't cancel an in-flight deploy; let it finish.
+
+    environment:
+      name: production
+      url: https://anna-aaron-wedding.fly.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # --remote-only: Fly.io builds the Docker image on their infrastructure.
+      # This avoids running a heavy multi-stage Rust + Trunk build on the GitHub runner.
+      # Fly.io caches Docker layers between deploys (cargo-chef handles invalidation).
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

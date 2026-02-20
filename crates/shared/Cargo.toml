@@ -1,0 +1,14 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2021"
+
+# This crate must compile for BOTH:
+#   - x86_64 (native, used by `server`)
+#   - wasm32-unknown-unknown (used by `frontend`)
+# Never add native-only dependencies here (no tokio, no sqlx, no axum).
+
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
