@@ -74,12 +74,12 @@ FROM chef AS native-cook
 COPY --from=planner /app/recipe.json recipe.json
 COPY --from=planner /app/.cargo ./.cargo
 
-# Cook native deps, excluding the wasm-only frontend crate.
+# Cook native deps for server + shared (cargo chef cook has no --exclude).
 RUN cargo chef cook \
     --release \
     --recipe-path recipe.json \
-    --workspace \
-    --exclude frontend
+    -p server \
+    -p shared
 
 # =============================================================================
 # Stage 4: wasm-cook — warm WASM dependency cache (frontend + shared)
