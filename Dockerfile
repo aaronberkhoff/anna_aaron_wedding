@@ -38,7 +38,7 @@ RUN cargo install trunk --locked
 
 # wasm-bindgen-cli version MUST match the wasm-bindgen crate version in Cargo.toml.
 # If you bump wasm-bindgen in Cargo.toml, update this version too.
-RUN cargo install wasm-bindgen-cli --version 0.2.99 --locked
+RUN cargo install wasm-bindgen-cli --version 0.2.108 --locked
 
 # wasm-opt optimizes WASM binary size (used by Trunk --release).
 RUN curl -fsSL https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-linux.tar.gz \
@@ -60,9 +60,9 @@ COPY crates/server/Cargo.toml ./crates/server/Cargo.toml
 COPY crates/frontend/Cargo.toml ./crates/frontend/Cargo.toml
 
 # Create minimal stub src files so cargo-chef can parse the full workspace.
-RUN mkdir -p crates/shared/src  && echo "pub fn _stub() {}" > crates/shared/src/lib.rs
-RUN mkdir -p crates/server/src  && echo "fn main() {}"       > crates/server/src/main.rs
-RUN mkdir -p crates/frontend/src && echo "fn main() {}"      > crates/frontend/src/main.rs
+RUN mkdir -p crates/shared/src   && echo "pub fn _stub() {}"            > crates/shared/src/lib.rs
+RUN mkdir -p crates/server/src   && echo "fn main() {}"                  > crates/server/src/main.rs
+RUN mkdir -p crates/frontend/src && echo "pub fn _stub() {}"             > crates/frontend/src/lib.rs
 
 RUN cargo chef prepare --recipe-path recipe.json
 
