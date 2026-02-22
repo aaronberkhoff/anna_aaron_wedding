@@ -18,7 +18,7 @@
 # =============================================================================
 # Stage 1: chef — build toolchain base image
 # =============================================================================
-FROM rust:1.82-slim-bookworm AS chef
+FROM rust:1-slim-bookworm AS chef
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
