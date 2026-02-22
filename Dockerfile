@@ -40,9 +40,23 @@ RUN cargo install trunk --locked
 # If you bump wasm-bindgen in Cargo.toml, update this version too.
 RUN cargo install wasm-bindgen-cli --version 0.2.108 --locked
 
-# Trunk will download wasm-opt at build time (version pinned in Trunk.toml).
-# Don't install it manually here — version_119 lacks --enable-bulk-memory by
-# default and breaks Trunk's -Oz optimization pass for modern WASM output.
+# Install binaryen (wasm-opt) and wrap it so the WASM features that modern
+# Rust output requires are always enabled. Trunk calls wasm-opt without
+# --enable-bulk-memory / --enable-nontrapping-float-to-int, which causes
+# validation errors. The wrapper injects those flags transparently.
+RUN curl -fsSL \
+    https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-linux.tar.gz \
+    | tar xz -C /tmp --strip-components=1 && \
+    mv /tmp/bin/wasm-opt /usr/local/bin/wasm-opt-real
+# Write wrapper line-by-line to stay within line-length limits.
+RUN echo '#!/bin/sh'                                          > /usr/local/bin/wasm-opt && \
+    echo 'exec /usr/local/bin/wasm-opt-real \\'             >> /usr/local/bin/wasm-opt && \
+    echo '  --enable-bulk-memory \\'                         >> /usr/local/bin/wasm-opt && \
+    echo '  --enable-nontrapping-float-to-int \\'            >> /usr/local/bin/wasm-opt && \
+    echo '  --enable-sign-ext \\'                            >> /usr/local/bin/wasm-opt && \
+    echo '  --enable-mutable-globals \\'                     >> /usr/local/bin/wasm-opt && \
+    echo '  "$@"'                                            >> /usr/local/bin/wasm-opt && \
+    chmod +x /usr/local/bin/wasm-opt
 
 WORKDIR /app
 
