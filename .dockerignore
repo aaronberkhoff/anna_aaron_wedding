@@ -1,0 +1,24 @@
+# Rust build artifacts — largest offender, often 1-5 GB
+target/
+
+# Frontend Trunk output (rebuilt inside Docker anyway)
+site/dist/
+
+# Local dev database
+*.db
+*.db-shm
+*.db-wal
+
+# Environment secrets
+.env
+*.env.local
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git history (not needed in image)
+.git/
+.claude/
