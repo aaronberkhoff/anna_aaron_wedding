@@ -1,4 +1,4 @@
-use crate::{error::AppError, state::AppState};
+use crate::{error::AppError, mail, state::AppState};
 use axum::{extract::State, Json};
 use shared::models::{
     guest::DietaryRestriction,
@@ -84,6 +84,11 @@ pub async fn submit_rsvp(
     )
     .execute(&state.pool)
     .await?;
+
+    // Send email notification — fire-and-forget, never fail the request.
+    if let Some(smtp) = &state.config.smtp {
+        mail::send_rsvp_notification(smtp, &payload).await;
+    }
 
     Ok(Json(RsvpResponse {
         success: true,
