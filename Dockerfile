@@ -105,7 +105,6 @@ FROM chef AS builder
 
 # Bring in warmed native dependency artifacts.
 COPY --from=native-cook /app/target ./target
-COPY --from=native-cook /root/.cargo /root/.cargo
 
 # Bring in warmed WASM dependency artifacts (merged into same target dir).
 COPY --from=wasm-cook /app/target/wasm32-unknown-unknown ./target/wasm32-unknown-unknown
