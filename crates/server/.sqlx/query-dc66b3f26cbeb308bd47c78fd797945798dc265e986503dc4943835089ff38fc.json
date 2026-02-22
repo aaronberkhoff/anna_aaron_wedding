@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT r.id, g.first_name, g.last_name, g.email,\n                  g.rsvp_status, g.plus_one, g.plus_one_name,\n                  g.dietary, r.song_request, r.message, r.submitted_at\n           FROM rsvps r\n           JOIN guests g ON r.guest_id = g.id\n           ORDER BY r.submitted_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "first_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "rsvp_status",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "plus_one",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "plus_one_name",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "dietary",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "song_request",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "message",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "submitted_at",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "dc66b3f26cbeb308bd47c78fd797945798dc265e986503dc4943835089ff38fc"
+}

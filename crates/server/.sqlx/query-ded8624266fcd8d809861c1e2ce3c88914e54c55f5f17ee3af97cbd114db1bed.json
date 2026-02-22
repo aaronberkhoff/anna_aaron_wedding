@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO guests\n                (id, first_name, last_name, email, rsvp_status, dietary, plus_one, plus_one_name)\n             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "ded8624266fcd8d809861c1e2ce3c88914e54c55f5f17ee3af97cbd114db1bed"
+}
