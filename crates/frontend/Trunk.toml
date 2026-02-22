@@ -20,7 +20,9 @@ open = false
 
 [tools]
 # Trunk will download these tools automatically if not present in PATH.
-# wasm-bindgen and wasm-opt versions should stay in sync with Cargo.toml.
-# Must exactly match the wasm-bindgen version resolved in Cargo.lock.
+# wasm-bindgen version must exactly match the wasm-bindgen version in Cargo.lock.
 # Run `grep 'name = "wasm-bindgen"' Cargo.lock -A 2` to verify after any update.
 wasm_bindgen = "0.2.108"
+# version_121+ enables bulk-memory and nontrapping-float-to-int by default,
+# which are required by modern Rust WASM output.
+wasm_opt = "version_121"

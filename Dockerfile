@@ -40,9 +40,9 @@ RUN cargo install trunk --locked
 # If you bump wasm-bindgen in Cargo.toml, update this version too.
 RUN cargo install wasm-bindgen-cli --version 0.2.108 --locked
 
-# wasm-opt optimizes WASM binary size (used by Trunk --release).
-RUN curl -fsSL https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-linux.tar.gz \
-    | tar xz -C /usr/local --strip-components=1
+# Trunk will download wasm-opt at build time (version pinned in Trunk.toml).
+# Don't install it manually here — version_119 lacks --enable-bulk-memory by
+# default and breaks Trunk's -Oz optimization pass for modern WASM output.
 
 WORKDIR /app
 
