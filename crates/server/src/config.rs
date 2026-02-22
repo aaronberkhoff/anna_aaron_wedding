@@ -9,7 +9,7 @@ pub struct Config {
 
 pub struct SmtpConfig {
     pub from: String,
-    pub to: String,
+    pub to: Vec<String>,
     pub username: String,
     pub password: String,
 }
@@ -24,7 +24,7 @@ impl Config {
         ) {
             (Ok(from), Ok(to), Ok(username), Ok(password)) => Some(SmtpConfig {
                 from,
-                to,
+                to: to.split(',').map(|s| s.trim().to_string()).collect(),
                 username,
                 password,
             }),

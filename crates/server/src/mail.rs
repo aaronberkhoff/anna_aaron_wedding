@@ -1,4 +1,5 @@
 use crate::config::SmtpConfig;
+use chrono::Local;
 use lettre::{
     message::header::ContentType,
     transport::smtp::authentication::Credentials,
@@ -16,6 +17,7 @@ pub async fn send_rsvp_notification(smtp: &SmtpConfig, rsvp: &RsvpRequest) {
     } else {
         "\nPlus-one: No".to_string()
     };
+    let submitted_at = Local::now().format("%B %d, %Y at %I:%M %p").to_string();
 
     let body = format!(
         "New RSVP received!\n\
@@ -24,7 +26,9 @@ pub async fn send_rsvp_notification(smtp: &SmtpConfig, rsvp: &RsvpRequest) {
         Email:     {}\n\
         Attending: {}{}\n\
         Song:      {}\n\
-        Message:   {}",
+        Message:   {}\n\
+        \n\
+        Submitted: {}",
         rsvp.first_name,
         rsvp.last_name,
         rsvp.email,
@@ -32,12 +36,15 @@ pub async fn send_rsvp_notification(smtp: &SmtpConfig, rsvp: &RsvpRequest) {
         plus_one,
         rsvp.song_request.as_deref().unwrap_or("—"),
         rsvp.message.as_deref().unwrap_or("—"),
+        submitted_at,
     );
 
-    let email = match Message::builder()
-        .from(smtp.from.parse().expect("valid from address"))
-        .to(smtp.to.parse().expect("valid to address"))
-        .subject(format!(
+    let mut builder = Message::builder()
+        .from(smtp.from.parse().expect("valid from address"));
+    for addr in &smtp.to {
+        builder = builder.to(addr.parse().expect("valid to address"));
+    }
+    let email = match builder.subject(format!(
             "RSVP: {} {} — {}",
             rsvp.first_name, rsvp.last_name, attending
         ))
@@ -58,7 +65,7 @@ pub async fn send_rsvp_notification(smtp: &SmtpConfig, rsvp: &RsvpRequest) {
         .build();
 
     match mailer.send(email).await {
-        Ok(_) => tracing::info!("RSVP notification sent to {}", smtp.to),
+        Ok(_) => tracing::info!("RSVP notification sent to {}", smtp.to.join(", ")),
         Err(e) => tracing::error!("failed to send RSVP email: {e}"),
     }
 }

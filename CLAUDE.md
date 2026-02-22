@@ -22,3 +22,6 @@ Wedding website
 - Rust/python backend
 - open to suggestions for front end
 - SQL database but would like capability for graph database
+
+## Deployment
+- fly.io
