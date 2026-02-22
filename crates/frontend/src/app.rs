@@ -1,5 +1,9 @@
+use crate::components::footer::Footer;
 use crate::components::nav::Nav;
-use crate::pages::{gallery::Gallery, home::Home, hotel::Hotel, rsvp::Rsvp, seating::Seating};
+use crate::pages::{
+    gallery::Gallery, home::Home, hotel::Hotel, itinerary::Itinerary, rsvp::Rsvp,
+    seating::Seating,
+};
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
 use leptos_router::{
@@ -20,9 +24,11 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/rsvp")     view=Rsvp    />
                     <Route path=path!("/seating")  view=Seating />
                     <Route path=path!("/hotel")    view=Hotel   />
+                    <Route path=path!("/itinerary") view=Itinerary />
                     <Route path=path!("/gallery")  view=Gallery />
                 </Routes>
             </main>
+            <Footer />
         </Router>
     }
 }

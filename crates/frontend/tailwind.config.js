@@ -16,9 +16,11 @@ module.exports = {
         ivory:     "#fffff0",
         charcoal:  "#36454f",
         gold:      "#c8a951",
+        earth:     "#8b6f47",
+        cream:     "#fdf8f0",
       },
       fontFamily: {
-        serif:  ["Georgia", "Times New Roman", "serif"],
+        serif:  ["Playfair Display", "Georgia", "Times New Roman", "serif"],
         sans:   ["Inter", "system-ui", "-apple-system", "sans-serif"],
         script: ["Dancing Script", "cursive"],
       },

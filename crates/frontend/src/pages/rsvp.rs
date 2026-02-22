@@ -5,8 +5,29 @@ use shared::models::{
     rsvp::{RsvpRequest, RsvpResponse},
 };
 
+// ── RSVP open/closed toggle ───────────────────────────────────────────────────
+// Set to `true` when you are ready to accept RSVPs.
+const RSVP_OPEN: bool = false;
+
 #[component]
 pub fn Rsvp() -> impl IntoView {
+    if !RSVP_OPEN {
+        return view! {
+            <div class="max-w-lg mx-auto px-6 py-20 text-center">
+                <h1 class="font-serif text-4xl text-charcoal mb-6">"RSVP"</h1>
+                <div class="flex items-center gap-4 justify-center mb-8 w-48 mx-auto">
+                    <div class="flex-1 h-px bg-gold/40"></div>
+                    <svg class="w-2 h-2 fill-gold opacity-60" viewBox="0 0 20 20">
+                        <path d="M10 0 L12.5 7.5 L20 10 L12.5 12.5 L10 20 L7.5 12.5 L0 10 L7.5 7.5 Z" />
+                    </svg>
+                    <div class="flex-1 h-px bg-gold/40"></div>
+                </div>
+                <p class="font-serif italic text-xl text-charcoal/70 mb-3">
+                    "RSVPs open soon!"
+                </p>
+            </div>
+        }.into_any();
+    }
     let (first_name, set_first_name) = signal(String::new());
     let (last_name, set_last_name) = signal(String::new());
     let (email, set_email) = signal(String::new());
@@ -45,6 +66,7 @@ pub fn Rsvp() -> impl IntoView {
 
     view! {
         <div class="max-w-lg mx-auto px-6 py-12">
+
             <h1 class="font-serif text-4xl text-charcoal mb-8 text-center">"RSVP"</h1>
 
             {move || result.get().map(|r| view! {
@@ -94,5 +116,5 @@ pub fn Rsvp() -> impl IntoView {
                 </button>
             </form>
         </div>
-    }
+    }.into_any()
 }
