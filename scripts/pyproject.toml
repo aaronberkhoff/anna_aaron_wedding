@@ -1,0 +1,20 @@
+[project]
+name = "wedding-scripts"
+version = "0.1.0"
+description = "Wedding website management scripts"
+requires-python = ">=3.11"
+dependencies = [
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+import-guests   = "import_guests:main"
+seed-guests     = "seed_test_guests:main"
+purge-guests    = "purge_guests:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

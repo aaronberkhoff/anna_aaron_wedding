@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT first_name, last_name, email, invite_code FROM guests WHERE id = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "first_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "invite_code",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "a8a2c3396c5c77817b42259037df907e91eefba3cfda61feb92546c837c16f7f"
+}

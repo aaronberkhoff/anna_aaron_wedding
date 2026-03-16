@@ -8,7 +8,11 @@
 #   rustup target add wasm32-unknown-unknown
 
 .PHONY: help dev-server dev-frontend migrate migrate-revert db-prepare \
-        check check-wasm fmt clippy test build-release clean
+        check check-wasm fmt clippy test build-release clean \
+        test-reset test-seed
+
+SCRIPTS_DIR  := scripts
+SEED_COUNT   ?= 20
 
 FRONTEND_DIR := crates/frontend
 SERVER_DIR   := crates/server
@@ -38,6 +42,10 @@ help:
 	@echo "    fmt              Run rustfmt on all crates"
 	@echo "    clippy           Run clippy — native crates"
 	@echo "    test             Run tests — native crates"
+	@echo ""
+	@echo "  Test data"
+	@echo "    test-reset       Wipe all guest/party/RSVP rows from the DB"
+	@echo "    test-seed        Migrate + seed $(SEED_COUNT) random guests (override: make test-seed SEED_COUNT=50)"
 	@echo ""
 	@echo "  Build"
 	@echo "    build-release    Build server binary + Trunk frontend (release)"
@@ -79,6 +87,22 @@ migrate-revert:
 # Commit the generated .sqlx/ directory so CI can use SQLX_OFFLINE=true.
 db-prepare:
 	cd $(SERVER_DIR) && DATABASE_URL=$(DB_URL) cargo sqlx prepare
+
+# ── Test data ─────────────────────────────────────────────────────────────────
+
+# Wipe all guest/party/RSVP data without prompts. Schema is left intact.
+test-reset:
+	cd $(SCRIPTS_DIR) && uv run python seed_test_guests.py \
+	  --db $(CURDIR)/wedding.db \
+	  --count 0 \
+	  --clear
+
+# Apply any pending migrations then seed SEED_COUNT random test guests.
+# Override the count: make test-seed SEED_COUNT=50
+test-seed: migrate
+	cd $(SCRIPTS_DIR) && uv run python seed_test_guests.py \
+	  --db $(CURDIR)/wedding.db \
+	  --count $(SEED_COUNT)
 
 # ── Checks ────────────────────────────────────────────────────────────────────
 

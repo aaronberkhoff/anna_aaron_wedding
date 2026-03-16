@@ -16,6 +16,8 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health::health_check))
         .route("/api/guests", get(guests::list_guests))
+        .route("/api/guests/lookup", get(guests::lookup_guest))
+        .route("/api/guests/search", get(guests::search_guests))
         .route("/api/rsvp", post(rsvp::submit_rsvp))
         .route("/api/rsvps", get(rsvp::list_rsvps))
         .route("/api/tables", get(tables::list_tables))

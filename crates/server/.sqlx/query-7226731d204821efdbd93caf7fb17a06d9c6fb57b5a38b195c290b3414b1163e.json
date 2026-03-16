@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, first_name, last_name, rehearsal_invited, dietary, rsvp_status\n             FROM guests WHERE invite_code = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "first_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "rehearsal_invited",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "dietary",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "rsvp_status",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7226731d204821efdbd93caf7fb17a06d9c6fb57b5a38b195c290b3414b1163e"
+}

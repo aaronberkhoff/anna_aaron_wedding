@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE party_members\n             SET dietary = ?, attending_reception = ?, attending_rehearsal = ?\n             WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "55453312b4978e9266770bbed2f150d41d9a89d75405a8b15e675269273a9191"
+}

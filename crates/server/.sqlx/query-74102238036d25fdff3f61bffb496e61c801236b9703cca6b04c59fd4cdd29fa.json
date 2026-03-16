@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE guests\n         SET rsvp_status = ?, dietary = ?, updated_at = datetime('now')\n         WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "74102238036d25fdff3f61bffb496e61c801236b9703cca6b04c59fd4cdd29fa"
+}

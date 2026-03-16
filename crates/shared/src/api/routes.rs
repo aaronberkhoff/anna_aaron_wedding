@@ -6,6 +6,8 @@ pub const HEALTH: &str = "/health";
 
 pub const GUESTS_LIST: &str = "/api/guests";
 pub const GUEST_BY_ID: &str = "/api/guests/:id";
+pub const GUEST_LOOKUP: &str = "/api/guests/lookup";
+pub const GUEST_SEARCH: &str = "/api/guests/search";
 
 pub const RSVP_SUBMIT: &str = "/api/rsvp";
 

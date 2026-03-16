@@ -1,84 +1,75 @@
 use crate::{error::AppError, mail, state::AppState};
 use axum::{extract::State, Json};
-use shared::models::{
-    guest::DietaryRestriction,
-    rsvp::{RsvpRecord, RsvpRequest, RsvpResponse},
-};
+use shared::models::rsvp::{RsvpRecord, RsvpRequest, RsvpResponse};
 use uuid::Uuid;
-
-fn dietary_to_str(d: &DietaryRestriction) -> String {
-    match d {
-        DietaryRestriction::None => "none".to_string(),
-        DietaryRestriction::Vegetarian => "vegetarian".to_string(),
-        DietaryRestriction::Vegan => "vegan".to_string(),
-        DietaryRestriction::GlutenFree => "gluten_free".to_string(),
-        DietaryRestriction::HalalKosher => "halal_kosher".to_string(),
-        DietaryRestriction::Other(s) => format!("other:{s}"),
-    }
-}
 
 pub async fn submit_rsvp(
     State(state): State<AppState>,
     Json(payload): Json<RsvpRequest>,
 ) -> Result<Json<RsvpResponse>, AppError> {
-    if payload.email.is_empty() {
-        return Err(AppError::Validation("email is required".to_string()));
-    }
-
-    let dietary = dietary_to_str(&payload.dietary_restriction);
-    let rsvp_status = if payload.attending { "attending" } else { "declined" };
-
-    // Upsert guest: update if email already exists, otherwise insert.
-    let existing = sqlx::query!(
-        "SELECT id FROM guests WHERE email = ? LIMIT 1",
-        payload.email
+    // Validate that the guest_id exists and fetch display info for the response.
+    let guest = sqlx::query!(
+        "SELECT first_name, last_name, email, invite_code FROM guests WHERE id = ? LIMIT 1",
+        payload.guest_id
     )
     .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| AppError::Validation("guest not found".to_string()))?;
+
+    let rsvp_status = if payload.attending_reception {
+        "attending"
+    } else {
+        "declined"
+    };
+
+    // Update primary guest's RSVP status and dietary preference.
+    sqlx::query!(
+        "UPDATE guests
+         SET rsvp_status = ?, dietary = ?, updated_at = datetime('now')
+         WHERE id = ?",
+        rsvp_status,
+        payload.dietary,
+        payload.guest_id
+    )
+    .execute(&state.pool)
     .await?;
 
-    let guest_id = if let Some(row) = existing {
+    // Update each party member's attendance and dietary preference.
+    for pm in &payload.party_members {
         sqlx::query!(
-            "UPDATE guests
-             SET first_name = ?, last_name = ?, rsvp_status = ?,
-                 dietary = ?, plus_one = ?, plus_one_name = ?,
-                 updated_at = datetime('now')
+            "UPDATE party_members
+             SET dietary = ?, attending_reception = ?, attending_rehearsal = ?
              WHERE id = ?",
-            payload.first_name,
-            payload.last_name,
-            rsvp_status,
-            dietary,
-            payload.plus_one,
-            payload.plus_one_name,
-            row.id
+            pm.dietary,
+            pm.attending_reception,
+            pm.attending_rehearsal,
+            pm.id
         )
         .execute(&state.pool)
         .await?;
-        row.id.expect("guest id is primary key, never null")
-    } else {
-        let id = Uuid::new_v4().to_string();
-        sqlx::query!(
-            "INSERT INTO guests
-                (id, first_name, last_name, email, rsvp_status, dietary, plus_one, plus_one_name)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            id,
-            payload.first_name,
-            payload.last_name,
-            payload.email,
-            rsvp_status,
-            dietary,
-            payload.plus_one,
-            payload.plus_one_name
-        )
+    }
+
+    // Serialize the known_guests list as a JSON array for storage.
+    let known_guests_json = serde_json::to_string(&payload.known_guests)
+        .unwrap_or_else(|_| "[]".to_string());
+
+    // Remove any existing RSVP for this guest so re-submissions replace rather
+    // than duplicate. The guest row's rsvp_status is already updated above.
+    sqlx::query!("DELETE FROM rsvps WHERE guest_id = ?", payload.guest_id)
         .execute(&state.pool)
         .await?;
-        id
-    };
 
     let rsvp_id = Uuid::new_v4().to_string();
     sqlx::query!(
-        "INSERT INTO rsvps (id, guest_id, song_request, message) VALUES (?, ?, ?, ?)",
+        "INSERT INTO rsvps
+             (id, guest_id, attending_reception, attending_rehearsal,
+              known_guests, song_request, message)
+         VALUES (?, ?, ?, ?, ?, ?, ?)",
         rsvp_id,
-        guest_id,
+        payload.guest_id,
+        payload.attending_reception,
+        payload.attending_rehearsal,
+        known_guests_json,
         payload.song_request,
         payload.message
     )
@@ -87,12 +78,23 @@ pub async fn submit_rsvp(
 
     // Send email notification — fire-and-forget, never fail the request.
     if let Some(smtp) = &state.config.smtp {
-        mail::send_rsvp_notification(smtp, &payload).await;
+        let guest_name = format!("{} {}", guest.first_name, guest.last_name);
+        mail::send_rsvp_notification(
+            smtp,
+            &guest_name,
+            guest.email.as_deref(),
+            guest.invite_code.as_deref(),
+            &payload,
+        )
+        .await;
     }
 
     Ok(Json(RsvpResponse {
         success: true,
-        message: format!("Thank you, {}! Your RSVP has been received.", payload.first_name),
+        message: format!(
+            "Thank you, {}! Your RSVP has been received.",
+            guest.first_name
+        ),
     }))
 }
 
@@ -100,9 +102,9 @@ pub async fn list_rsvps(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<RsvpRecord>>, AppError> {
     let rows = sqlx::query!(
-        r#"SELECT r.id, g.first_name, g.last_name, g.email,
-                  g.rsvp_status, g.plus_one, g.plus_one_name,
-                  g.dietary, r.song_request, r.message, r.submitted_at
+        r#"SELECT r.id, g.first_name, g.last_name, g.email, g.dietary,
+                  r.attending_reception, r.attending_rehearsal,
+                  r.known_guests, r.song_request, r.message, r.submitted_at
            FROM rsvps r
            JOIN guests g ON r.guest_id = g.id
            ORDER BY r.submitted_at DESC"#
@@ -117,10 +119,10 @@ pub async fn list_rsvps(
             first_name: row.first_name,
             last_name: row.last_name,
             email: row.email,
-            attending: row.rsvp_status == "attending",
-            plus_one: row.plus_one != 0,
-            plus_one_name: row.plus_one_name,
+            attending_reception: row.attending_reception.map(|v| v != 0),
+            attending_rehearsal: row.attending_rehearsal.map(|v| v != 0),
             dietary_restriction: row.dietary,
+            known_guests: row.known_guests,
             song_request: row.song_request,
             message: row.message,
             submitted_at: row.submitted_at,

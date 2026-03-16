@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT r.id, g.first_name, g.last_name, g.email,\n                  g.rsvp_status, g.plus_one, g.plus_one_name,\n                  g.dietary, r.song_request, r.message, r.submitted_at\n           FROM rsvps r\n           JOIN guests g ON r.guest_id = g.id\n           ORDER BY r.submitted_at DESC",
+  "query": "SELECT r.id, g.first_name, g.last_name, g.email, g.dietary,\n                  r.attending_reception, r.attending_rehearsal,\n                  r.known_guests, r.song_request, r.message, r.submitted_at\n           FROM rsvps r\n           JOIN guests g ON r.guest_id = g.id\n           ORDER BY r.submitted_at DESC",
   "describe": {
     "columns": [
       {
@@ -24,22 +24,22 @@
         "type_info": "Text"
       },
       {
-        "name": "rsvp_status",
+        "name": "dietary",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "plus_one",
+        "name": "attending_reception",
         "ordinal": 5,
         "type_info": "Integer"
       },
       {
-        "name": "plus_one_name",
+        "name": "attending_rehearsal",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "dietary",
+        "name": "known_guests",
         "ordinal": 7,
         "type_info": "Text"
       },
@@ -68,13 +68,13 @@
       false,
       true,
       false,
-      false,
       true,
-      false,
+      true,
+      true,
       true,
       true,
       false
     ]
   },
-  "hash": "dc66b3f26cbeb308bd47c78fd797945798dc265e986503dc4943835089ff38fc"
+  "hash": "76e8f5158e8b6f6381186d11e7ca7d35f1638255bcc845e0d1a14bebade3cb5b"
 }
