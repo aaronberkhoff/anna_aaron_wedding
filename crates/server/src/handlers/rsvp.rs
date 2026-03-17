@@ -50,8 +50,8 @@ pub async fn submit_rsvp(
     }
 
     // Serialize the known_guests list as a JSON array for storage.
-    let known_guests_json = serde_json::to_string(&payload.known_guests)
-        .unwrap_or_else(|_| "[]".to_string());
+    let known_guests_json =
+        serde_json::to_string(&payload.known_guests).unwrap_or_else(|_| "[]".to_string());
 
     // Remove any existing RSVP for this guest so re-submissions replace rather
     // than duplicate. The guest row's rsvp_status is already updated above.
@@ -98,9 +98,7 @@ pub async fn submit_rsvp(
     }))
 }
 
-pub async fn list_rsvps(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<RsvpRecord>>, AppError> {
+pub async fn list_rsvps(State(state): State<AppState>) -> Result<Json<Vec<RsvpRecord>>, AppError> {
     let rows = sqlx::query!(
         r#"SELECT r.id, g.first_name, g.last_name, g.email, g.dietary,
                   r.attending_reception, r.attending_rehearsal,

@@ -67,8 +67,7 @@ pub fn Rsvp() -> impl IntoView {
     let (attending_rehearsal, set_attending_rehearsal) = signal(Option::<bool>::None);
     let (dietary, set_dietary) = signal("none".to_string());
     // party_states: Vec<(id, attending_reception, attending_rehearsal, dietary)>
-    let party_states: RwSignal<Vec<(String, bool, Option<bool>, String)>> =
-        RwSignal::new(vec![]);
+    let party_states: RwSignal<Vec<(String, bool, Option<bool>, String)>> = RwSignal::new(vec![]);
     let selected_known_guests: RwSignal<Vec<String>> = RwSignal::new(vec![]);
     let (kg_query, set_kg_query) = signal(String::new());
     let (kg_results, set_kg_results) = signal(Vec::<GuestSearchResult>::new());
@@ -118,7 +117,8 @@ pub fn Rsvp() -> impl IntoView {
                 }
                 Err(e) => {
                     let msg = if e.contains("404") || e.contains("HTTP 404") {
-                        "Invite code not found. Please check your code or search by name.".to_string()
+                        "Invite code not found. Please check your code or search by name."
+                            .to_string()
                     } else {
                         format!("Lookup failed: {e}")
                     };
@@ -146,7 +146,9 @@ pub fn Rsvp() -> impl IntoView {
         move |_| {
             let id = selected_id.get().trim().to_string();
             if id.is_empty() {
-                set_lookup_error.set(Some("Please select a guest from the search results.".to_string()));
+                set_lookup_error.set(Some(
+                    "Please select a guest from the search results.".to_string(),
+                ));
                 return;
             }
             do_lookup(format!("id={id}"));
@@ -166,7 +168,10 @@ pub fn Rsvp() -> impl IntoView {
             match client::get::<Vec<GuestSearchResult>>(&url).await {
                 Ok(results) => {
                     if results.is_empty() {
-                        set_lookup_error.set(Some("No guests found. Please check the spelling or try your invite code.".to_string()));
+                        set_lookup_error.set(Some(
+                            "No guests found. Please check the spelling or try your invite code."
+                                .to_string(),
+                        ));
                     }
                     if !results.is_empty() {
                         set_selected_id.set(results[0].id.clone());
@@ -201,7 +206,8 @@ pub fn Rsvp() -> impl IntoView {
             .into_iter()
             .enumerate()
             .map(|(i, (id, att_rec, att_reh, diet))| {
-                let name = data.party_members
+                let name = data
+                    .party_members
                     .get(i)
                     .map(|pm| pm.name.clone())
                     .unwrap_or_default();
@@ -225,7 +231,11 @@ pub fn Rsvp() -> impl IntoView {
             song_request: None,
             message: {
                 let m = message.get();
-                if m.is_empty() { None } else { Some(m) }
+                if m.is_empty() {
+                    None
+                } else {
+                    Some(m)
+                }
             },
         };
 
@@ -743,10 +753,7 @@ fn AttendanceToggle(
 // ── Reusable: Dietary restriction select ──────────────────────────────────────
 
 #[component]
-fn DietarySelect(
-    value: Signal<String>,
-    on_change: impl Fn(String) + 'static,
-) -> impl IntoView {
+fn DietarySelect(value: Signal<String>, on_change: impl Fn(String) + 'static) -> impl IntoView {
     view! {
         <div class="flex flex-col gap-1">
             <p class="text-xs font-semibold uppercase tracking-wide text-charcoal/60">"Dietary restrictions"</p>

@@ -1,9 +1,8 @@
 use crate::config::SmtpConfig;
 use chrono::Local;
 use lettre::{
-    message::header::ContentType,
-    transport::smtp::authentication::Credentials,
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
+    AsyncTransport, Message, Tokio1Executor,
 };
 use shared::models::rsvp::RsvpRequest;
 
@@ -14,7 +13,11 @@ pub async fn send_rsvp_notification(
     invite_code: Option<&str>,
     rsvp: &RsvpRequest,
 ) {
-    let reception = if rsvp.attending_reception { "YES" } else { "NO" };
+    let reception = if rsvp.attending_reception {
+        "YES"
+    } else {
+        "NO"
+    };
     let rehearsal = match rsvp.attending_rehearsal {
         Some(true) => "YES",
         Some(false) => "NO",
@@ -73,9 +76,12 @@ pub async fn send_rsvp_notification(
         message = rsvp.message.as_deref().unwrap_or("—"),
     );
 
-    let attending_label = if rsvp.attending_reception { "YES" } else { "NO" };
-    let mut builder = Message::builder()
-        .from(smtp.from.parse().expect("valid from address"));
+    let attending_label = if rsvp.attending_reception {
+        "YES"
+    } else {
+        "NO"
+    };
+    let mut builder = Message::builder().from(smtp.from.parse().expect("valid from address"));
     for addr in &smtp.to {
         builder = builder.to(addr.parse().expect("valid to address"));
     }
@@ -103,9 +109,15 @@ pub async fn send_rsvp_notification(
     }
 
     // ── Confirmation email to the guest (if they have an email on file) ────────
-    let Some(guest_addr) = guest_email else { return };
+    let Some(guest_addr) = guest_email else {
+        return;
+    };
 
-    let reception_str = if rsvp.attending_reception { "Yes" } else { "No" };
+    let reception_str = if rsvp.attending_reception {
+        "Yes"
+    } else {
+        "No"
+    };
     let rehearsal_str = match rsvp.attending_rehearsal {
         Some(true) => "Yes",
         Some(false) => "No",
