@@ -8,6 +8,10 @@ use shared::{
     },
 };
 
+// ── Type aliases ──────────────────────────────────────────────────────────────
+// (id, attending_reception, attending_rehearsal, dietary)
+type PartyStateVec = RwSignal<Vec<(String, bool, Option<bool>, String)>>;
+
 // ── Toggle ────────────────────────────────────────────────────────────────────
 // Set to `true` when RSVPs are open.
 const RSVP_OPEN: bool = true;
@@ -67,7 +71,7 @@ pub fn Rsvp() -> impl IntoView {
     let (attending_rehearsal, set_attending_rehearsal) = signal(Option::<bool>::None);
     let (dietary, set_dietary) = signal("none".to_string());
     // party_states: Vec<(id, attending_reception, attending_rehearsal, dietary)>
-    let party_states: RwSignal<Vec<(String, bool, Option<bool>, String)>> = RwSignal::new(vec![]);
+    let party_states: PartyStateVec = RwSignal::new(vec![]);
     let selected_known_guests: RwSignal<Vec<String>> = RwSignal::new(vec![]);
     let (kg_query, set_kg_query) = signal(String::new());
     let (kg_results, set_kg_results) = signal(Vec::<GuestSearchResult>::new());
@@ -130,7 +134,6 @@ pub fn Rsvp() -> impl IntoView {
     };
 
     let do_lookup_by_code = {
-        let do_lookup = do_lookup.clone();
         move |_| {
             let code = code_input.get().trim().to_string();
             if code.is_empty() {
@@ -142,7 +145,6 @@ pub fn Rsvp() -> impl IntoView {
     };
 
     let do_lookup_by_id = {
-        let do_lookup = do_lookup.clone();
         move |_| {
             let id = selected_id.get().trim().to_string();
             if id.is_empty() {
@@ -655,7 +657,7 @@ fn PersonRow(
 fn PartyMemberRow(
     name: String,
     index: usize,
-    party_states: RwSignal<Vec<(String, bool, Option<bool>, String)>>,
+    party_states: PartyStateVec,
     show_rehearsal: bool,
 ) -> impl IntoView {
     view! {
