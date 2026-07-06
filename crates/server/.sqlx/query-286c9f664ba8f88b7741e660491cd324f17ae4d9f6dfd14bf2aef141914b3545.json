@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT invite_code FROM guests WHERE id = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "invite_code",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "286c9f664ba8f88b7741e660491cd324f17ae4d9f6dfd14bf2aef141914b3545"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT r.id, g.first_name, g.last_name, g.email, g.dietary,\n                  r.attending_reception, r.attending_rehearsal,\n                  r.known_guests, r.song_request, r.message, r.submitted_at\n           FROM rsvps r\n           JOIN guests g ON r.guest_id = g.id\n           ORDER BY r.submitted_at DESC",
+  "query": "SELECT r.id, g.first_name, g.last_name, g.email,\n                  r.attending_reception, r.attending_rehearsal,\n                  r.known_guests, r.song_request, r.message, r.submitted_at\n           FROM rsvps r\n           JOIN guests g ON r.guest_id = g.id\n           ORDER BY r.submitted_at DESC",
   "describe": {
     "columns": [
       {
@@ -24,38 +24,33 @@
         "type_info": "Text"
       },
       {
-        "name": "dietary",
-        "ordinal": 4,
-        "type_info": "Text"
-      },
-      {
         "name": "attending_reception",
-        "ordinal": 5,
+        "ordinal": 4,
         "type_info": "Integer"
       },
       {
         "name": "attending_rehearsal",
-        "ordinal": 6,
+        "ordinal": 5,
         "type_info": "Integer"
       },
       {
         "name": "known_guests",
-        "ordinal": 7,
+        "ordinal": 6,
         "type_info": "Text"
       },
       {
         "name": "song_request",
-        "ordinal": 8,
+        "ordinal": 7,
         "type_info": "Text"
       },
       {
         "name": "message",
-        "ordinal": 9,
+        "ordinal": 8,
         "type_info": "Text"
       },
       {
         "name": "submitted_at",
-        "ordinal": 10,
+        "ordinal": 9,
         "type_info": "Text"
       }
     ],
@@ -67,7 +62,6 @@
       false,
       false,
       true,
-      false,
       true,
       true,
       true,
@@ -76,5 +70,5 @@
       false
     ]
   },
-  "hash": "76e8f5158e8b6f6381186d11e7ca7d35f1638255bcc845e0d1a14bebade3cb5b"
+  "hash": "8cb96c5f8311366fb773d38d4e8a8a4970e790d56eaf292f3632e88f21a9573e"
 }

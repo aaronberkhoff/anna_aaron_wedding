@@ -4,30 +4,14 @@ use shared::{
     api::routes,
     models::{
         guest::{GuestLookup, GuestSearchResult},
-        rsvp::{PartyMemberRsvp, RsvpRequest, RsvpResponse},
+        rsvp::{GuestRsvp, RsvpRequest, RsvpResponse},
     },
 };
 
-// ── Type aliases ──────────────────────────────────────────────────────────────
-// (id, attending_reception, attending_rehearsal, dietary)
-type PartyStateVec = RwSignal<Vec<(String, bool, Option<bool>, String)>>;
+// (guest_id, attending_reception, attending_rehearsal)
+type PartyStateVec = RwSignal<Vec<(String, bool, Option<bool>)>>;
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
-// Set to `true` when RSVPs are open.
 const RSVP_OPEN: bool = true;
-
-// ── Dietary options ───────────────────────────────────────────────────────────
-const DIETARY_OPTIONS: &[(&str, &str)] = &[
-    ("none", "No restrictions"),
-    ("vegetarian", "Vegetarian"),
-    ("vegan", "Vegan"),
-    ("gluten_free", "Gluten-free"),
-    ("halal_kosher", "Halal / Kosher"),
-    ("other", "Other (note in message)"),
-];
-
-// ── Step enum (encoded as u8 signal) ─────────────────────────────────────────
-// 0 = Lookup, 1 = Form, 2 = Confirmed
 
 #[component]
 pub fn Rsvp() -> impl IntoView {
@@ -48,10 +32,9 @@ pub fn Rsvp() -> impl IntoView {
         .into_any();
     }
 
-    // ── Shared step signal ────────────────────────────────────────────────────
     let (step, set_step) = signal(0u8);
 
-    // ── Step 1 state: Lookup ──────────────────────────────────────────────────
+    // ── Step 1: Lookup state ──────────────────────────────────────────────────
     let (code_input, set_code_input) = signal(String::new());
     let (name_input, set_name_input) = signal(String::new());
     let (search_results, set_search_results) = signal(Vec::<GuestSearchResult>::new());
@@ -59,18 +42,13 @@ pub fn Rsvp() -> impl IntoView {
     let (looking_up, set_looking_up) = signal(false);
     let (searching, set_searching) = signal(false);
     let (lookup_error, set_lookup_error) = signal(Option::<String>::None);
-    // Set to true when lookup finds a guest who has already RSVPed —
-    // shows the "update your RSVP?" prompt before advancing to the form.
     let (rsvp_exists, set_rsvp_exists) = signal(false);
 
-    // ── Guest data (populated after lookup) ───────────────────────────────────
+    // ── Shared guest data ─────────────────────────────────────────────────────
     let (guest_data, set_guest_data) = signal(Option::<GuestLookup>::None);
 
-    // ── Step 2 state: Form ────────────────────────────────────────────────────
-    let (attending_reception, set_attending_reception) = signal(true);
-    let (attending_rehearsal, set_attending_rehearsal) = signal(Option::<bool>::None);
-    let (dietary, set_dietary) = signal("none".to_string());
-    // party_states: Vec<(id, attending_reception, attending_rehearsal, dietary)>
+    // ── Step 2: Form state ────────────────────────────────────────────────────
+    // One entry per party member: (guest_id, attending_reception, attending_rehearsal)
     let party_states: PartyStateVec = RwSignal::new(vec![]);
     let selected_known_guests: RwSignal<Vec<String>> = RwSignal::new(vec![]);
     let (kg_query, set_kg_query) = signal(String::new());
@@ -79,10 +57,10 @@ pub fn Rsvp() -> impl IntoView {
     let (submitting, set_submitting) = signal(false);
     let (submit_error, set_submit_error) = signal(Option::<String>::None);
 
-    // ── Step 3 state: Confirmation ────────────────────────────────────────────
+    // ── Step 3: Confirmation ──────────────────────────────────────────────────
     let (confirm_msg, set_confirm_msg) = signal(String::new());
 
-    // ── Helper: do lookup by code or id ──────────────────────────────────────
+    // ── Lookup helper ─────────────────────────────────────────────────────────
     let do_lookup = move |query_param: String| {
         set_looking_up.set(true);
         set_lookup_error.set(None);
@@ -90,30 +68,24 @@ pub fn Rsvp() -> impl IntoView {
             let url = format!("{}?{}", routes::GUEST_LOOKUP, query_param);
             match client::get::<GuestLookup>(&url).await {
                 Ok(data) => {
-                    // Initialise party form state from the returned party members.
-                    let initial_states: Vec<(String, bool, Option<bool>, String)> = data
-                        .party_members
+                    // Initialise party state: default reception=true, rehearsal=Some(true) if invited.
+                    let initial: Vec<(String, bool, Option<bool>)> = data
+                        .members
                         .iter()
-                        .map(|pm| (pm.id.clone(), true, None, pm.dietary.clone()))
+                        .map(|m| {
+                            let reh = if m.rehearsal_invited { Some(true) } else { None };
+                            (m.id.clone(), true, reh)
+                        })
                         .collect();
-                    party_states.set(initial_states);
+                    party_states.set(initial);
 
-                    // If rehearsal-invited, default rehearsal attendance to true.
-                    if data.guest.rehearsal_invited {
-                        set_attending_rehearsal.set(Some(true));
-                        // Set party members' rehearsal default too.
-                        party_states.update(|states| {
-                            for s in states.iter_mut() {
-                                s.2 = Some(true);
-                            }
-                        });
-                    }
-
-                    set_dietary.set(data.guest.dietary.clone());
-                    let already_rsvped = data.guest.rsvp_status != "pending";
+                    let already_rsvped = data
+                        .members
+                        .first()
+                        .map(|m| m.rsvp_status != "pending")
+                        .unwrap_or(false);
                     set_guest_data.set(Some(data));
                     if already_rsvped {
-                        // Stay on step 0 and show the update-RSVP prompt.
                         set_rsvp_exists.set(true);
                     } else {
                         set_step.set(1);
@@ -133,28 +105,24 @@ pub fn Rsvp() -> impl IntoView {
         });
     };
 
-    let do_lookup_by_code = {
-        move |_| {
-            let code = code_input.get().trim().to_string();
-            if code.is_empty() {
-                set_lookup_error.set(Some("Please enter your 4-digit invite code.".to_string()));
-                return;
-            }
-            do_lookup(format!("code={code}"));
+    let do_lookup_by_code = move |_| {
+        let code = code_input.get().trim().to_string();
+        if code.is_empty() {
+            set_lookup_error.set(Some("Please enter your 4-digit invite code.".to_string()));
+            return;
         }
+        do_lookup(format!("code={code}"));
     };
 
-    let do_lookup_by_id = {
-        move |_| {
-            let id = selected_id.get().trim().to_string();
-            if id.is_empty() {
-                set_lookup_error.set(Some(
-                    "Please select a guest from the search results.".to_string(),
-                ));
-                return;
-            }
-            do_lookup(format!("id={id}"));
+    let do_lookup_by_id = move |_| {
+        let id = selected_id.get().trim().to_string();
+        if id.is_empty() {
+            set_lookup_error.set(Some(
+                "Please select a guest from the search results.".to_string(),
+            ));
+            return;
         }
+        do_lookup(format!("id={id}"));
     };
 
     let do_search = move |_| {
@@ -174,8 +142,7 @@ pub fn Rsvp() -> impl IntoView {
                             "No guests found. Please check the spelling or try your invite code."
                                 .to_string(),
                         ));
-                    }
-                    if !results.is_empty() {
+                    } else {
                         set_selected_id.set(results[0].id.clone());
                     }
                     set_search_results.set(results);
@@ -203,41 +170,25 @@ pub fn Rsvp() -> impl IntoView {
         ev.prevent_default();
         let Some(data) = guest_data.get() else { return };
 
-        let party: Vec<PartyMemberRsvp> = party_states
+        let party: Vec<GuestRsvp> = party_states
             .get()
             .into_iter()
-            .enumerate()
-            .map(|(i, (id, att_rec, att_reh, diet))| {
-                let name = data
-                    .party_members
-                    .get(i)
-                    .map(|pm| pm.name.clone())
-                    .unwrap_or_default();
-                PartyMemberRsvp {
-                    id,
-                    name,
-                    attending_reception: att_rec,
-                    attending_rehearsal: att_reh,
-                    dietary: diet,
-                }
+            .zip(data.members.iter())
+            .map(|((id, att_rec, att_reh), member)| GuestRsvp {
+                guest_id: id,
+                name: member.full_name(),
+                attending_reception: att_rec,
+                attending_rehearsal: att_reh,
             })
             .collect();
 
         let payload = RsvpRequest {
-            guest_id: data.guest.id.clone(),
-            attending_reception: attending_reception.get(),
-            attending_rehearsal: attending_rehearsal.get(),
-            dietary: dietary.get(),
-            party_members: party,
+            party,
             known_guests: selected_known_guests.get(),
             song_request: None,
             message: {
                 let m = message.get();
-                if m.is_empty() {
-                    None
-                } else {
-                    Some(m)
-                }
+                if m.is_empty() { None } else { Some(m) }
             },
         };
 
@@ -269,9 +220,9 @@ pub fn Rsvp() -> impl IntoView {
             // ── Step 1: Lookup ────────────────────────────────────────────────
             {move || (step.get() == 0).then(|| {
                 if rsvp_exists.get() {
-                    // ── Already-RSVPed prompt ──────────────────────────────────
                     let guest_name = guest_data.get()
-                        .map(|d| d.guest.full_name())
+                        .and_then(|d| d.members.into_iter().next())
+                        .map(|m| m.full_name())
                         .unwrap_or_default();
                     view! {
                         <div class="bg-amber-50 border border-amber-300 rounded-lg p-6 flex flex-col gap-4 text-center">
@@ -310,14 +261,12 @@ pub fn Rsvp() -> impl IntoView {
                         </div>
                     }.into_any()
                 } else {
-                    // ── Normal lookup form ─────────────────────────────────────
                     view! {
                         <div class="flex flex-col gap-6">
                             <p class="text-center text-charcoal/70">
-                                "Enter your 4-digit invite code to find your RSVP."
+                                "Enter your 4-digit invite code to RSVP."
                             </p>
 
-                            // Code lookup
                             <div class="flex gap-2">
                                 <input
                                     type="text"
@@ -335,14 +284,12 @@ pub fn Rsvp() -> impl IntoView {
                                 </button>
                             </div>
 
-                            // Divider
                             <div class="flex items-center gap-3 text-charcoal/40 text-sm">
                                 <div class="flex-1 h-px bg-charcoal/20"></div>
                                 "or search by name"
                                 <div class="flex-1 h-px bg-charcoal/20"></div>
                             </div>
 
-                            // Name search
                             <div class="flex gap-2">
                                 <input
                                     type="text"
@@ -359,7 +306,6 @@ pub fn Rsvp() -> impl IntoView {
                                 </button>
                             </div>
 
-                            // Search results dropdown
                             {move || {
                                 let results = search_results.get();
                                 (!results.is_empty()).then(|| {
@@ -372,9 +318,7 @@ pub fn Rsvp() -> impl IntoView {
                                             >
                                                 {options.into_iter().map(|r| {
                                                     let id = r.id.clone();
-                                                    view! {
-                                                        <option value=id>{r.full_name}</option>
-                                                    }
+                                                    view! { <option value=id>{r.full_name}</option> }
                                                 }).collect_view()}
                                             </select>
                                             <button
@@ -389,7 +333,6 @@ pub fn Rsvp() -> impl IntoView {
                                 })
                             }}
 
-                            // Error
                             {move || lookup_error.get().map(|e| view! {
                                 <p class="text-red-600 text-sm text-center">{e}</p>
                             })}
@@ -403,89 +346,63 @@ pub fn Rsvp() -> impl IntoView {
                 let Some(data) = guest_data.get() else {
                     return view! { <p>"Loading…"</p> }.into_any();
                 };
-                let guest_name = data.guest.full_name();
-                let rehearsal_invited = data.guest.rehearsal_invited;
-                let party_members = data.party_members.clone();
+                let welcome_name = data.members.first().map(|m| m.full_name()).unwrap_or_default();
+                let any_rehearsal = data.members.iter().any(|m| m.rehearsal_invited);
+                let members_snap = data.members.clone();
 
                 view! {
                     <form on:submit=on_submit class="flex flex-col gap-8">
                         <h2 class="font-serif text-2xl text-charcoal text-center">
-                            "Welcome, " {guest_name.clone()} "!"
+                            "Welcome, " {welcome_name} "!"
                         </h2>
 
-                        // ── Reception ─────────────────────────────────────────
+                        // ── Party attendance ──────────────────────────────────
                         <section class="flex flex-col gap-4">
                             <h3 class="font-semibold text-charcoal uppercase tracking-wide text-sm border-b border-gold/40 pb-1">
                                 "Wedding Reception — November 21, 2026"
                             </h3>
-
-                            // Primary guest row
-                            <PersonRow
-                                name=guest_name.clone()
-                                show_rehearsal=false
-                                attending_reception=attending_reception
-                                set_attending_reception=set_attending_reception
-                                attending_rehearsal=attending_rehearsal
-                                set_attending_rehearsal=set_attending_rehearsal
-                                dietary=dietary
-                                set_dietary=set_dietary
-                            />
-
-                            // Party member rows (optional)
-                            {(!party_members.is_empty()).then(|| view! {
-                                <p class="text-xs text-charcoal/50 italic -mb-1">
-                                    "Optional — RSVP for your party members if you'd like."
-                                </p>
-                            })}
-                            {party_members.iter().enumerate().map(|(i, pm)| {
-                                let pm_name = pm.name.clone();
+                            {members_snap.iter().enumerate().map(|(i, member)| {
+                                let name = member.full_name();
                                 view! {
-                                    <PartyMemberRow
-                                        name=pm_name
+                                    <MemberRow
+                                        name=name
                                         index=i
                                         party_states=party_states
+                                        show_reception=true
                                         show_rehearsal=false
                                     />
                                 }
                             }).collect_view()}
                         </section>
 
-                        // ── Rehearsal dinner (if invited) ─────────────────────
-                        {rehearsal_invited.then(|| view! {
-                            <section class="flex flex-col gap-4">
-                                <h3 class="font-semibold text-charcoal uppercase tracking-wide text-sm border-b border-gold/40 pb-1">
-                                    "Rehearsal Dinner — November 19, 2026"
-                                </h3>
-
-                                <PersonRow
-                                    name=guest_name.clone()
-                                    show_rehearsal=true
-                                    attending_reception=attending_reception
-                                    set_attending_reception=set_attending_reception
-                                    attending_rehearsal=attending_rehearsal
-                                    set_attending_rehearsal=set_attending_rehearsal
-                                    dietary=dietary
-                                    set_dietary=set_dietary
-                                />
-
-                                {party_members.iter().enumerate().map(|(i, pm)| {
-                                    let pm_name = pm.name.clone();
-                                    view! {
-                                        <PartyMemberRow
-                                            name=pm_name
-                                            index=i
-                                            party_states=party_states
-                                            show_rehearsal=true
-                                        />
-                                    }
-                                }).collect_view()}
-                            </section>
+                        // ── Rehearsal dinner (if any member invited) ──────────
+                        {any_rehearsal.then(|| {
+                            let members_reh = data.members.clone();
+                            view! {
+                                <section class="flex flex-col gap-4">
+                                    <h3 class="font-semibold text-charcoal uppercase tracking-wide text-sm border-b border-gold/40 pb-1">
+                                        "Rehearsal Dinner — November 19, 2026"
+                                    </h3>
+                                    {members_reh.iter().enumerate().map(|(i, member)| {
+                                        let name = member.full_name();
+                                        view! {
+                                            <MemberRow
+                                                name=name
+                                                index=i
+                                                party_states=party_states
+                                                show_reception=false
+                                                show_rehearsal=true
+                                            />
+                                        }
+                                    }).collect_view()}
+                                </section>
+                            }
                         })}
 
                         // ── Seating preference ────────────────────────────────
                         <section class="flex flex-col gap-2">
                             <label class="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
-                                "Guests you know — who would you like to be seated near? (optional)"
+                                "Who would you like to be seated near? (optional)"
                             </label>
                             <input
                                 type="text"
@@ -498,7 +415,6 @@ pub fn Rsvp() -> impl IntoView {
                                     do_kg_search(q);
                                 }
                             />
-                            // Dropdown of search results
                             {move || {
                                 let results = kg_results.get();
                                 let selected = selected_known_guests.get();
@@ -528,7 +444,6 @@ pub fn Rsvp() -> impl IntoView {
                                     </div>
                                 })
                             }}
-                            // Selected guest chips
                             {move || {
                                 let names = selected_known_guests.get();
                                 (!names.is_empty()).then(|| view! {
@@ -553,17 +468,16 @@ pub fn Rsvp() -> impl IntoView {
                             }}
                         </section>
 
-                        // ── Optional fields ───────────────────────────────────
-                        <section class="flex flex-col gap-3">
+                        // ── Message ───────────────────────────────────────────
+                        <section>
                             <textarea
                                 placeholder="Message to the couple (optional)"
                                 rows="3"
-                                class="border border-gold rounded px-4 py-2 bg-ivory text-charcoal text-sm resize-none"
+                                class="w-full border border-gold rounded px-4 py-2 bg-ivory text-charcoal text-sm resize-none"
                                 on:input=move |ev| set_message.set(event_target_value(&ev))
                             ></textarea>
                         </section>
 
-                        // ── Error ─────────────────────────────────────────────
                         {move || submit_error.get().map(|e| view! {
                             <p class="text-red-600 text-sm text-center">{e}</p>
                         })}
@@ -606,103 +520,40 @@ pub fn Rsvp() -> impl IntoView {
     .into_any()
 }
 
-// ── PersonRow: attendance + dietary for the primary guest ─────────────────────
+// ── MemberRow: one attendance card per guest ───────────────────────────────────
 
 #[component]
-fn PersonRow(
-    name: String,
-    show_rehearsal: bool,
-    attending_reception: ReadSignal<bool>,
-    set_attending_reception: WriteSignal<bool>,
-    attending_rehearsal: ReadSignal<Option<bool>>,
-    set_attending_rehearsal: WriteSignal<Option<bool>>,
-    dietary: ReadSignal<String>,
-    set_dietary: WriteSignal<String>,
-) -> impl IntoView {
-    view! {
-        <div class="border border-gold/30 rounded-lg bg-ivory p-4 flex flex-col gap-3">
-            <p class="font-semibold text-charcoal">{name}</p>
-
-            {if show_rehearsal {
-                view! {
-                    <AttendanceToggle
-                        label="Attending rehearsal dinner?"
-                        value=Signal::derive(move || attending_rehearsal.get().unwrap_or(false))
-                        on_change=move |v| set_attending_rehearsal.set(Some(v))
-                    />
-                }.into_any()
-            } else {
-                view! {
-                    <AttendanceToggle
-                        label="Attending reception?"
-                        value=Signal::derive(move || attending_reception.get())
-                        on_change=move |v| set_attending_reception.set(v)
-                    />
-                }.into_any()
-            }}
-
-            {(!show_rehearsal).then(|| view! {
-                <DietarySelect
-                    value=Signal::derive(move || dietary.get())
-                    on_change=move |v| set_dietary.set(v)
-                />
-            })}
-        </div>
-    }
-}
-
-// ── PartyMemberRow: attendance + dietary for a party member ───────────────────
-
-#[component]
-fn PartyMemberRow(
+fn MemberRow(
     name: String,
     index: usize,
     party_states: PartyStateVec,
+    show_reception: bool,
     show_rehearsal: bool,
 ) -> impl IntoView {
     view! {
         <div class="border border-gold/30 rounded-lg bg-ivory p-4 flex flex-col gap-3">
             <p class="font-semibold text-charcoal">{name}</p>
 
-            {if show_rehearsal {
-                view! {
-                    <AttendanceToggle
-                        label="Attending rehearsal dinner?"
-                        value=Signal::derive(move || {
-                            party_states.get()
-                                .get(index)
-                                .and_then(|s| s.2)
-                                .unwrap_or(false)
-                        })
-                        on_change=move |v| party_states.update(|s| {
-                            if let Some(row) = s.get_mut(index) { row.2 = Some(v); }
-                        })
-                    />
-                }.into_any()
-            } else {
-                view! {
-                    <AttendanceToggle
-                        label="Attending reception?"
-                        value=Signal::derive(move || {
-                            party_states.get().get(index).map(|s| s.1).unwrap_or(true)
-                        })
-                        on_change=move |v| party_states.update(|s| {
-                            if let Some(row) = s.get_mut(index) { row.1 = v; }
-                        })
-                    />
-                }.into_any()
-            }}
-
-            {(!show_rehearsal).then(|| view! {
-                <DietarySelect
+            {show_reception.then(|| view! {
+                <AttendanceToggle
+                    label="Attending reception?"
                     value=Signal::derive(move || {
-                        party_states.get()
-                            .get(index)
-                            .map(|s| s.3.clone())
-                            .unwrap_or_default()
+                        party_states.get().get(index).map(|s| s.1).unwrap_or(true)
                     })
                     on_change=move |v| party_states.update(|s| {
-                        if let Some(row) = s.get_mut(index) { row.3 = v; }
+                        if let Some(row) = s.get_mut(index) { row.1 = v; }
+                    })
+                />
+            })}
+
+            {show_rehearsal.then(|| view! {
+                <AttendanceToggle
+                    label="Attending rehearsal dinner?"
+                    value=Signal::derive(move || {
+                        party_states.get().get(index).and_then(|s| s.2).unwrap_or(false)
+                    })
+                    on_change=move |v| party_states.update(|s| {
+                        if let Some(row) = s.get_mut(index) { row.2 = Some(v); }
                     })
                 />
             })}
@@ -710,7 +561,7 @@ fn PartyMemberRow(
     }
 }
 
-// ── Reusable: Yes/No attendance toggle ────────────────────────────────────────
+// ── AttendanceToggle: Yes / No button pair ─────────────────────────────────────
 
 #[component]
 fn AttendanceToggle(
@@ -718,7 +569,6 @@ fn AttendanceToggle(
     value: Signal<bool>,
     on_change: impl Fn(bool) + 'static,
 ) -> impl IntoView {
-    // Wrap in Rc so both click closures can share ownership (WASM is single-threaded).
     let on_change = std::rc::Rc::new(on_change);
     let on_change_no = on_change.clone();
     view! {
@@ -748,33 +598,6 @@ fn AttendanceToggle(
                     "No"
                 </button>
             </div>
-        </div>
-    }
-}
-
-// ── Reusable: Dietary restriction select ──────────────────────────────────────
-
-#[component]
-fn DietarySelect(value: Signal<String>, on_change: impl Fn(String) + 'static) -> impl IntoView {
-    view! {
-        <div class="flex flex-col gap-1">
-            <p class="text-xs font-semibold uppercase tracking-wide text-charcoal/60">"Dietary restrictions"</p>
-            <select
-                class="border border-gold/50 rounded px-3 py-1.5 bg-white text-charcoal text-sm"
-                on:change=move |ev| on_change(event_target_value(&ev))
-            >
-                {DIETARY_OPTIONS.iter().map(|(val, label)| {
-                    let v = *val;
-                    view! {
-                        <option
-                            value=v
-                            selected=move || value.get() == v
-                        >
-                            {*label}
-                        </option>
-                    }
-                }).collect_view()}
-            </select>
         </div>
     }
 }

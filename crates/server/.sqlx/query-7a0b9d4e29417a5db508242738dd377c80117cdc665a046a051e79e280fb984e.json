@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, first_name, last_name, rehearsal_invited, dietary, rsvp_status\n             FROM guests WHERE id = ? LIMIT 1",
+  "query": "SELECT id, first_name, last_name, rehearsal_invited, rsvp_status\n                 FROM guests WHERE id = ? LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -24,13 +24,8 @@
         "type_info": "Integer"
       },
       {
-        "name": "dietary",
-        "ordinal": 4,
-        "type_info": "Text"
-      },
-      {
         "name": "rsvp_status",
-        "ordinal": 5,
+        "ordinal": 4,
         "type_info": "Text"
       }
     ],
@@ -42,9 +37,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "c0de134c8def2c11e41c3c3c9909b17d2be13566dd92e5dc3e070648ca2006cd"
+  "hash": "7a0b9d4e29417a5db508242738dd377c80117cdc665a046a051e79e280fb984e"
 }

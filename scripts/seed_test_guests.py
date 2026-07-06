@@ -1,99 +1,63 @@
 #!/usr/bin/env python3
 """
-seed_test_guests.py — Insert random test guests into the SQLite database.
+seed_test_guests.py — Insert known test guests into the SQLite database.
+
+Creates three parties with predictable invite codes for manual testing.
+Safe to run multiple times — existing test guests are replaced.
+
+Test scenarios:
+  0001  Test Solo                          — solo guest, no rehearsal
+  0002  Test Alpha / Beta / Gamma          — party of 3, no rehearsal
+  0003  Test Rehearsal / Test Rehearsal2   — party of 2, rehearsal invited
 
 Usage:
-  python scripts/seed_test_guests.py --db wedding.db --count 20
-  python scripts/seed_test_guests.py --db wedding.db --count 20 --clear
+  python scripts/seed_test_guests.py --db wedding.db
 """
 
 import argparse
-import random
 import sqlite3
 import uuid
 
-FIRST_NAMES = [
-    "James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda",
-    "William", "Barbara", "David", "Susan", "Richard", "Jessica", "Joseph", "Sarah",
-    "Thomas", "Karen", "Charles", "Lisa", "Christopher", "Nancy", "Daniel", "Betty",
-    "Matthew", "Margaret", "Anthony", "Sandra", "Mark", "Ashley",
+TEST_CODES = ("0001", "0002", "0003")
+
+TEST_GUESTS = [
+    # (first, last, email, code, rehearsal_invited)
+    ("Test", "Solo",       "test.solo@example.com",      "0001", 0),
+    ("Test", "Alpha",      None,                          "0002", 0),
+    ("Test", "Beta",       None,                          "0002", 0),
+    ("Test", "Gamma",      None,                          "0002", 0),
+    ("Test", "Rehearsal",  "test.rehearsal@example.com",  "0003", 1),
+    ("Test", "Rehearsal2", None,                          "0003", 1),
 ]
 
-LAST_NAMES = [
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-    "Wilson", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris", "Martin",
-    "Thompson", "Robinson", "Clark", "Lewis", "Lee", "Walker", "Hall", "Allen",
-    "Young", "Hernandez", "King", "Wright", "Lopez", "Hill",
-]
 
-DIETARY = ["none", "none", "none", "vegetarian", "vegan", "gluten_free", "halal_kosher"]
-
-
-def _gen_code(used: set) -> str:
-    for _ in range(10_000):
-        code = f"{random.randint(0, 9999):04d}"
-        if code not in used:
-            used.add(code)
-            return code
-    raise RuntimeError("Ran out of unique invite codes")
-
-
-def seed(db_path: str, count: int, clear: bool):
+def seed(db_path: str):
     con = sqlite3.connect(db_path)
-    cur = con.cursor()
 
-    if clear:
-        cur.execute("DELETE FROM party_members")
-        cur.execute("DELETE FROM rsvps")
-        cur.execute("DELETE FROM guests")
-        con.commit()
-        print(f"Cleared existing guest data from {db_path}.")
+    # Remove any previous test guests so re-runs are idempotent.
+    placeholders = ",".join("?" * len(TEST_CODES))
+    con.execute(f"DELETE FROM rsvps WHERE guest_id IN (SELECT id FROM guests WHERE invite_code IN ({placeholders}))", TEST_CODES)
+    con.execute(f"DELETE FROM guests WHERE invite_code IN ({placeholders})", TEST_CODES)
 
-    # Collect existing codes so we don't collide.
-    existing_codes = {row[0] for row in cur.execute("SELECT invite_code FROM guests WHERE invite_code IS NOT NULL")}
-
-    inserted = 0
-    for _ in range(count):
-        first = random.choice(FIRST_NAMES)
-        last = random.choice(LAST_NAMES)
-        email = f"{first.lower()}.{last.lower()}{random.randint(1, 99)}@example.com"
-        code = _gen_code(existing_codes)
-        rehearsal = 1 if random.random() < 0.3 else 0
-        dietary = random.choice(DIETARY)
-        guest_id = str(uuid.uuid4())
-
-        cur.execute(
-            """INSERT INTO guests
-                   (id, first_name, last_name, email, dietary, invite_code, rehearsal_invited)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (guest_id, first, last, email, dietary, code, rehearsal),
-        )
-
-        # ~50% of guests have 1–2 party members
-        if random.random() < 0.5:
-            pm_count = random.randint(1, 2)
-            for _ in range(pm_count):
-                pm_first = random.choice(FIRST_NAMES)
-                pm_last = last  # same family
-                cur.execute(
-                    "INSERT INTO party_members (id, guest_id, name, dietary) VALUES (?, ?, ?, ?)",
-                    (str(uuid.uuid4()), guest_id, f"{pm_first} {pm_last}", random.choice(DIETARY)),
-                )
-
-        inserted += 1
-
+    con.executemany(
+        "INSERT INTO guests (id, first_name, last_name, email, invite_code, rehearsal_invited) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        [(str(uuid.uuid4()), first, last, email, code, rehearsal)
+         for first, last, email, code, rehearsal in TEST_GUESTS],
+    )
     con.commit()
     con.close()
-    print(f"Inserted {inserted} test guests into {db_path}.")
+
+    print(f"Test guests inserted into {db_path}:")
+    print("  0001 — Test Solo (solo, no rehearsal)")
+    print("  0002 — Test Alpha / Beta / Gamma (party of 3, no rehearsal)")
+    print("  0003 — Test Rehearsal / Test Rehearsal2 (party of 2, rehearsal invited)")
 
 
 def main():
-    p = argparse.ArgumentParser(description="Seed test guests into the wedding database.")
+    p = argparse.ArgumentParser(description="Insert test guests for manual website testing.")
     p.add_argument("--db", required=True, help="Path to the SQLite database file")
-    p.add_argument("--count", type=int, default=10, help="Number of guests to insert (default: 10)")
-    p.add_argument("--clear", action="store_true", help="Delete all existing guest data first")
-    args = p.parse_args()
-    seed(args.db, args.count, args.clear)
+    seed(p.parse_args().db)
 
 
 if __name__ == "__main__":

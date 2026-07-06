@@ -1,31 +1,21 @@
 use serde::{Deserialize, Serialize};
 
-/// RSVP attendance for a single party member.
+/// RSVP data for one person in the party.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PartyMemberRsvp {
-    /// References party_members.id
-    pub id: String,
-    /// Display name — used in email notifications so the record is human-readable.
+pub struct GuestRsvp {
+    pub guest_id: String,
+    /// Full name — used in email notifications.
     pub name: String,
     pub attending_reception: bool,
-    /// None if the party member is not invited to the rehearsal dinner.
+    /// None if not invited to the rehearsal dinner.
     pub attending_rehearsal: Option<bool>,
-    /// Dietary preference string (e.g. "none", "vegetarian").
-    pub dietary: String,
 }
 
 /// Submitted by the frontend to POST /api/rsvp.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RsvpRequest {
-    /// References guests.id — set during the lookup step.
-    pub guest_id: String,
-    pub attending_reception: bool,
-    /// None if the primary guest is not invited to the rehearsal dinner.
-    pub attending_rehearsal: Option<bool>,
-    /// Dietary preference string for the primary guest.
-    pub dietary: String,
-    pub party_members: Vec<PartyMemberRsvp>,
-    /// Names of other guests they'd like to be seated near (for seating chart).
+    /// One entry per person in the party.
+    pub party: Vec<GuestRsvp>,
     pub known_guests: Vec<String>,
     pub song_request: Option<String>,
     pub message: Option<String>,
@@ -46,7 +36,6 @@ pub struct RsvpRecord {
     pub email: Option<String>,
     pub attending_reception: Option<bool>,
     pub attending_rehearsal: Option<bool>,
-    pub dietary_restriction: String,
     pub known_guests: Option<String>,
     pub song_request: Option<String>,
     pub message: Option<String>,

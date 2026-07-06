@@ -9,17 +9,6 @@ pub enum RsvpStatus {
     Declined,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum DietaryRestriction {
-    None,
-    Vegetarian,
-    Vegan,
-    GlutenFree,
-    HalalKosher,
-    Other(String),
-}
-
 /// Full guest record (used internally and by the admin guest list).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Guest {
@@ -29,7 +18,6 @@ pub struct Guest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub rsvp_status: RsvpStatus,
-    pub dietary_restriction: DietaryRestriction,
     pub invite_code: Option<String>,
     pub rehearsal_invited: bool,
     pub invite_sent: bool,
@@ -43,17 +31,13 @@ impl Guest {
 }
 
 /// Lightweight guest info returned by the invite-code lookup and name-search endpoints.
-/// Used to populate the RSVP form on the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuestSummary {
     pub id: String,
     pub first_name: String,
     pub last_name: String,
     pub rehearsal_invited: bool,
-    /// Current dietary preference stored as a string (e.g. "none", "vegetarian").
-    pub dietary: String,
-    /// Current RSVP status: "pending", "attending", or "declined".
-    /// "pending" means no RSVP has been submitted yet.
+    /// "pending", "attending", or "declined"
     pub rsvp_status: String,
 }
 
@@ -63,19 +47,10 @@ impl GuestSummary {
     }
 }
 
-/// A pre-loaded party member associated with a primary guest.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PartyMember {
-    pub id: String,
-    pub name: String,
-    pub dietary: String,
-}
-
-/// Returned by GET /api/guests/lookup — the primary guest plus their party.
+/// Returned by GET /api/guests/lookup — all guests sharing the same invite code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuestLookup {
-    pub guest: GuestSummary,
-    pub party_members: Vec<PartyMember>,
+    pub members: Vec<GuestSummary>,
 }
 
 /// Returned by GET /api/guests/search — minimal info for the name-search dropdown.

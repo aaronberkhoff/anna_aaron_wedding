@@ -13,37 +13,23 @@ pub async fn send_rsvp_notification(
     invite_code: Option<&str>,
     rsvp: &RsvpRequest,
 ) {
-    let reception = if rsvp.attending_reception {
-        "YES"
-    } else {
-        "NO"
-    };
-    let rehearsal = match rsvp.attending_rehearsal {
-        Some(true) => "YES",
-        Some(false) => "NO",
-        None => "not invited",
-    };
+    let first = &rsvp.party[0];
+    let attending_label = if first.attending_reception { "YES" } else { "NO" };
 
-    let party_lines = if rsvp.party_members.is_empty() {
-        "  (none)".to_string()
-    } else {
-        rsvp.party_members
-            .iter()
-            .map(|pm| {
-                let pm_reception = if pm.attending_reception { "YES" } else { "NO" };
-                let pm_rehearsal = match pm.attending_rehearsal {
-                    Some(true) => "YES",
-                    Some(false) => "NO",
-                    None => "—",
-                };
-                format!(
-                    "  • {} | Reception: {} | Rehearsal: {} | Dietary: {}",
-                    pm.name, pm_reception, pm_rehearsal, pm.dietary
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
+    let party_lines = rsvp
+        .party
+        .iter()
+        .map(|g| {
+            let reception = if g.attending_reception { "YES" } else { "NO" };
+            let rehearsal = match g.attending_rehearsal {
+                Some(true) => "YES",
+                Some(false) => "NO",
+                None => "—",
+            };
+            format!("  • {} | Reception: {} | Rehearsal: {}", g.name, reception, rehearsal)
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let known = if rsvp.known_guests.is_empty() {
         "—".to_string()
@@ -56,14 +42,11 @@ pub async fn send_rsvp_notification(
     let body = format!(
         "New RSVP received!\n\
         \n\
-        Name:              {guest_name}\n\
-        Email:             {email}\n\
-        Invite code:       {code}\n\
-        Reception:         {reception}\n\
-        Rehearsal dinner:  {rehearsal}\n\
-        Dietary:           {dietary}\n\
+        Name:         {guest_name}\n\
+        Email:        {email}\n\
+        Invite code:  {code}\n\
         \n\
-        Party members:\n\
+        Party ({count}):\n\
         {party_lines}\n\
         \n\
         Seated near:  {known}\n\
@@ -72,20 +55,15 @@ pub async fn send_rsvp_notification(
         Submitted: {submitted_at}",
         email = guest_email.unwrap_or("—"),
         code = invite_code.unwrap_or("—"),
-        dietary = rsvp.dietary,
+        count = rsvp.party.len(),
         message = rsvp.message.as_deref().unwrap_or("—"),
     );
 
-    let attending_label = if rsvp.attending_reception {
-        "YES"
-    } else {
-        "NO"
-    };
     let mut builder = Message::builder().from(smtp.from.parse().expect("valid from address"));
     for addr in &smtp.to {
         builder = builder.to(addr.parse().expect("valid to address"));
     }
-    let email = match builder
+    let notification = match builder
         .subject(format!("RSVP: {guest_name} — {attending_label}"))
         .header(ContentType::TEXT_PLAIN)
         .body(body)
@@ -103,50 +81,45 @@ pub async fn send_rsvp_notification(
         .credentials(creds)
         .build();
 
-    match mailer.send(email).await {
+    match mailer.send(notification).await {
         Ok(_) => tracing::info!("RSVP notification sent to {}", smtp.to.join(", ")),
         Err(e) => tracing::error!("failed to send RSVP email: {e}"),
     }
 
-    // ── Confirmation email to the guest (if they have an email on file) ────────
+    // ── Confirmation email to the guest ────────────────────────────────────────
     let Some(guest_addr) = guest_email else {
         return;
     };
 
-    let reception_str = if rsvp.attending_reception {
-        "Yes"
-    } else {
-        "No"
-    };
-    let rehearsal_str = match rsvp.attending_rehearsal {
+    let reception_str = if first.attending_reception { "Yes" } else { "No" };
+    let rehearsal_str = match first.attending_rehearsal {
         Some(true) => "Yes",
         Some(false) => "No",
         None => "N/A",
     };
-    let party_count = rsvp.party_members.len();
-    let party_line = if party_count == 0 {
-        String::new()
+    let others = rsvp.party.len().saturating_sub(1);
+    let party_line = if others > 0 {
+        format!("Additional party members: {others}\n")
     } else {
-        format!("Party members RSVPed: {party_count}\n")
+        String::new()
     };
     let seated_line = if rsvp.known_guests.is_empty() {
         String::new()
     } else {
-        format!("Seated near:          {}\n", rsvp.known_guests.join(", "))
+        format!("Seated near:  {}\n", rsvp.known_guests.join(", "))
     };
     let message_line = match rsvp.message.as_deref() {
-        Some(m) if !m.is_empty() => format!("Your message:         {m}\n"),
+        Some(m) if !m.is_empty() => format!("Your message: {m}\n"),
         _ => String::new(),
     };
 
     let guest_body = format!(
         "Hi {guest_name},\n\
         \n\
-        We have received your RSVP for Anna & Aaron's wedding! Here is a summary of what we recorded:\n\
+        We have received your RSVP for Anna & Aaron's wedding! Here is a summary:\n\
         \n\
         Reception (November 21, 2026):        {reception_str}\n\
         Rehearsal Dinner (November 19, 2026): {rehearsal_str}\n\
-        Dietary preference:                   {dietary}\n\
         {party_line}\
         {seated_line}\
         {message_line}\
@@ -157,10 +130,9 @@ pub async fn send_rsvp_notification(
         \n\
         With love,\n\
         Anna & Aaron",
-        dietary = rsvp.dietary,
     );
 
-    let guest_email_msg = match Message::builder()
+    let confirmation = match Message::builder()
         .from(smtp.from.parse().expect("valid from address"))
         .to(match guest_addr.parse() {
             Ok(a) => a,
@@ -186,7 +158,7 @@ pub async fn send_rsvp_notification(
         .credentials(creds)
         .build();
 
-    match mailer.send(guest_email_msg).await {
+    match mailer.send(confirmation).await {
         Ok(_) => tracing::info!("RSVP confirmation sent to {guest_addr}"),
         Err(e) => tracing::error!("failed to send guest confirmation email: {e}"),
     }
