@@ -14,7 +14,11 @@ pub async fn send_rsvp_notification(
     rsvp: &RsvpRequest,
 ) {
     let first = &rsvp.party[0];
-    let attending_label = if first.attending_reception { "YES" } else { "NO" };
+    let attending_label = if first.attending_reception {
+        "YES"
+    } else {
+        "NO"
+    };
 
     let party_lines = rsvp
         .party
@@ -26,7 +30,10 @@ pub async fn send_rsvp_notification(
                 Some(false) => "NO",
                 None => "—",
             };
-            format!("  • {} | Reception: {} | Rehearsal: {}", g.name, reception, rehearsal)
+            format!(
+                "  • {} | Reception: {} | Rehearsal: {}",
+                g.name, reception, rehearsal
+            )
         })
         .collect::<Vec<_>>()
         .join("\n");
@@ -91,7 +98,11 @@ pub async fn send_rsvp_notification(
         return;
     };
 
-    let reception_str = if first.attending_reception { "Yes" } else { "No" };
+    let reception_str = if first.attending_reception {
+        "Yes"
+    } else {
+        "No"
+    };
     let rehearsal_str = match first.attending_rehearsal {
         Some(true) => "Yes",
         Some(false) => "No",

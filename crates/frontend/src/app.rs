@@ -1,12 +1,12 @@
 use crate::components::footer::Footer;
 use crate::components::nav::Nav;
 use crate::pages::{
-    gallery::Gallery, home::Home, hotel::Hotel, itinerary::Itinerary, rsvp::Rsvp, seating::Seating,
+    gallery::Gallery, home::Home, hotel::Hotel, information::Information, rsvp::Rsvp,
 };
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
 use leptos_router::{
-    components::{Route, Router, Routes},
+    components::{Redirect, Route, Router, Routes},
     path,
 };
 
@@ -21,9 +21,10 @@ pub fn App() -> impl IntoView {
                 <Routes fallback=|| view! { <NotFound /> }>
                     <Route path=path!("/")         view=Home    />
                     <Route path=path!("/rsvp")     view=Rsvp    />
-                    <Route path=path!("/seating")  view=Seating />
                     <Route path=path!("/hotel")    view=Hotel   />
-                    <Route path=path!("/itinerary") view=Itinerary />
+                    <Route path=path!("/information") view=Information />
+                    // Old link — keep it working for anyone who bookmarked it
+                    <Route path=path!("/itinerary") view=|| view! { <Redirect path="/information" /> } />
                     <Route path=path!("/gallery")  view=Gallery />
                 </Routes>
             </main>

@@ -12,9 +12,8 @@ pub fn Nav() -> impl IntoView {
             <ul class="flex gap-8 text-xs font-sans tracking-[0.15em] uppercase text-charcoal/60">
                 <li><A href="/">"Home"</A></li>
                 <li><A href="/rsvp">"RSVP"</A></li>
-                <li><A href="/seating">"Seating"</A></li>
                 <li><A href="/hotel">"Hotel"</A></li>
-                <li><A href="/itinerary">"Itinerary"</A></li>
+                <li><A href="/information">"Information"</A></li>
                 <li><A href="/gallery">"Gallery"</A></li>
             </ul>
         </nav>

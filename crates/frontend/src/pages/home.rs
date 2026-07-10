@@ -97,11 +97,11 @@ pub fn Home() -> impl IntoView {
                         "RSVP"
                     </span>
                 </A>
-                <A href="/itinerary">
+                <A href="/information">
                     <span class="inline-block border border-gold text-charcoal font-sans text-xs
                                   tracking-[0.2em] uppercase px-10 py-3 cursor-pointer
                                   hover:bg-gold hover:text-ivory transition-all duration-300">
-                        "Itinerary"
+                        "Information"
                     </span>
                 </A>
             </div>
@@ -113,8 +113,9 @@ pub fn Home() -> impl IntoView {
                 "We\u{2019}re getting married!"
             </h2>
             <p class="text-charcoal/60 leading-relaxed font-sans">
-                "We are so excited to celebrate this special day surrounded by the people we love. "
-                "Please use the navigation above to RSVP, find your seat, and explore hotel options."
+                "We are so excited to celebrate this special day with you. "
+                "Please use the navigation above to RSVP, get information about the wedding, "
+                "and explore hotel options."
             </p>
         </section>
     }

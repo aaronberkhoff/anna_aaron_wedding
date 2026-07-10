@@ -59,20 +59,25 @@ pub async fn lookup_guest(
         }
 
         rows.into_iter()
-            .map(|r| map_summary(r.id, r.first_name, r.last_name, r.rehearsal_invited, r.rsvp_status))
+            .map(|r| {
+                map_summary(
+                    r.id,
+                    r.first_name,
+                    r.last_name,
+                    r.rehearsal_invited,
+                    r.rsvp_status,
+                )
+            })
             .collect()
     } else if let Some(guest_id_str) = params.id.as_deref() {
         let i = guest_id_str.trim().to_string();
 
         // Find this guest's invite_code, then return everyone in that party.
-        let invite_code = sqlx::query!(
-            "SELECT invite_code FROM guests WHERE id = ? LIMIT 1",
-            i
-        )
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or(AppError::NotFound)?
-        .invite_code;
+        let invite_code = sqlx::query!("SELECT invite_code FROM guests WHERE id = ? LIMIT 1", i)
+            .fetch_optional(&state.pool)
+            .await?
+            .ok_or(AppError::NotFound)?
+            .invite_code;
 
         if let Some(code) = invite_code {
             let rows = sqlx::query!(
@@ -84,7 +89,15 @@ pub async fn lookup_guest(
             .await?;
 
             rows.into_iter()
-                .map(|r| map_summary(r.id, r.first_name, r.last_name, r.rehearsal_invited, r.rsvp_status))
+                .map(|r| {
+                    map_summary(
+                        r.id,
+                        r.first_name,
+                        r.last_name,
+                        r.rehearsal_invited,
+                        r.rsvp_status,
+                    )
+                })
                 .collect()
         } else {
             // No invite code — return just this one guest.
@@ -97,7 +110,13 @@ pub async fn lookup_guest(
             .await?
             .ok_or(AppError::NotFound)?;
 
-            vec![map_summary(row.id, row.first_name, row.last_name, row.rehearsal_invited, row.rsvp_status)]
+            vec![map_summary(
+                row.id,
+                row.first_name,
+                row.last_name,
+                row.rehearsal_invited,
+                row.rsvp_status,
+            )]
         }
     } else {
         return Err(AppError::Validation("provide code or id".to_string()));

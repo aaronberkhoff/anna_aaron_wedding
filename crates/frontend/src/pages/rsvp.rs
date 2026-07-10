@@ -73,7 +73,11 @@ pub fn Rsvp() -> impl IntoView {
                         .members
                         .iter()
                         .map(|m| {
-                            let reh = if m.rehearsal_invited { Some(true) } else { None };
+                            let reh = if m.rehearsal_invited {
+                                Some(true)
+                            } else {
+                                None
+                            };
                             (m.id.clone(), true, reh)
                         })
                         .collect();
@@ -188,7 +192,11 @@ pub fn Rsvp() -> impl IntoView {
             song_request: None,
             message: {
                 let m = message.get();
-                if m.is_empty() { None } else { Some(m) }
+                if m.is_empty() {
+                    None
+                } else {
+                    Some(m)
+                }
             },
         };
 
