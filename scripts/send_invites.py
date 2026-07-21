@@ -24,10 +24,12 @@ Required environment variables (when not --dry-run):
 """
 
 import argparse
+import html
 import os
 import smtplib
 import sqlite3
 import sys
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
@@ -63,14 +65,18 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
     if test_only:
         placeholders = ",".join("?" * len(TEST_CODES))
         all_rows = con.execute(
-            f"SELECT id, first_name, last_name, email, invite_code, invite_sent "
+            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rehearsal_invited "
             f"FROM guests WHERE invite_code IN ({placeholders}) ORDER BY invite_code, rowid",
             TEST_CODES,
         ).fetchall()
     else:
+        # Exclude test guests from real sends — their fake addresses would bounce.
+        placeholders = ",".join("?" * len(TEST_CODES))
         all_rows = con.execute(
-            "SELECT id, first_name, last_name, email, invite_code, invite_sent "
-            "FROM guests WHERE invite_code IS NOT NULL ORDER BY invite_code, rowid"
+            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rehearsal_invited "
+            f"FROM guests WHERE invite_code IS NOT NULL AND invite_code NOT IN ({placeholders}) "
+            f"ORDER BY invite_code, rowid",
+            TEST_CODES,
         ).fetchall()
 
     # Build a map of invite_code -> list of all member names in that party.
@@ -90,6 +96,7 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
             "name": f"{row['first_name']} {row['last_name']}",
             "email": row["email"],
             "invite_code": row["invite_code"],
+            "rehearsal_invited": bool(row["rehearsal_invited"]),
             "party": party_members[row["invite_code"]],
         })
 
@@ -97,41 +104,356 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
     return guests
 
 
-def build_body(guest_name: str, party: list[str], code: str, base_url: str) -> str:
-    link = f"{base_url}/rsvp?code={code}"
-
+def _party_line_text(guest_name: str, party: list[str]) -> str:
     others = [m for m in party if m != guest_name]
     if others:
-        party_line = (
+        return (
             f"\nThis code also covers your party: {', '.join(others)}.\n"
             f"Anyone in your group can open the link and RSVP for everyone at once.\n"
         )
-    else:
-        party_line = "\n"
+    return ""
+
+
+GOLD = "#c8a951"
+CHARCOAL = "#36454f"
+CHARCOAL_MUTED = "#6f7b85"
+CHAMPAGNE = "#f7e7ce"
+CREAM = "#fdf8f0"
+IVORY = "#fffff0"
+
+FONT_SCRIPT = "'Dancing Script', cursive"
+FONT_SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif"
+FONT_SANS = "'Inter', Arial, Helvetica, sans-serif"
+
+
+def _party_line_html(guest_name: str, party: list[str]) -> str:
+    others = [m for m in party if m != guest_name]
+    if not others:
+        return ""
+    names = ", ".join(html.escape(m) for m in others)
+    return (
+        f'<p style="font-family:{FONT_SANS};font-size:13px;color:{CHARCOAL_MUTED};'
+        f'margin:14px 0 0;line-height:1.6;">'
+        f"This code also covers your party: <strong style=\"color:{CHARCOAL};\">{names}</strong>.<br>"
+        f"Anyone in your group can open the link and RSVP for everyone at once.</p>"
+    )
+
+
+def build_body_text(guest_name: str, party: list[str], code: str, base_url: str,
+                     rehearsal_invited: bool) -> str:
+    link = f"{base_url}/rsvp?code={code}"
+    rsvp_block = (
+        f"Please RSVP by September 4, 2026 at the link below:\n"
+        f"  {link}\n"
+        f"\n"
+        f"Your invite code: {code}\n"
+        f"{_party_line_text(guest_name, party)}"
+    )
+
+    if rehearsal_invited:
+        return (
+            f"Dear {guest_name},\n"
+            f"\n"
+            f"You are cordially invited to celebrate the rehearsal and wedding of Anna Pauline Hagen "
+            f"and Aaron Joseph Berkhoff on Friday, November 20, and Saturday, November 21, 2026.\n"
+            f"\n"
+            f"Friday, November 20\n"
+            f"\n"
+            f"Wedding Rehearsal\n"
+            f"6:30 PM (begins promptly; please arrive by 6:15 PM)\n"
+            f"Corpus Christi Catholic Parish\n"
+            f"2318 N Cascade Ave\n"
+            f"Colorado Springs, CO 80907\n"
+            f"\n"
+            f"The rehearsal is for the wedding party and the parents of the bride and groom. "
+            f"The rehearsal is expected to conclude at 7:00 PM.\n"
+            f"\n"
+            f"Rehearsal Dinner\n"
+            f"7:30 PM\n"
+            f"MacKenzie's Chop House\n"
+            f"128 S Tejon St\n"
+            f"Colorado Springs, CO 80903\n"
+            f"\n"
+            f"If you are not participating in the rehearsal, we look forward to welcoming you at the "
+            f"rehearsal dinner beginning at 7:30 PM.\n"
+            f"\n"
+            f"Saturday, November 21\n"
+            f"Nuptial Mass\n"
+            f"1:30 PM (begins promptly)\n"
+            f"Corpus Christi Catholic Parish\n"
+            f"2318 N Cascade Ave\n"
+            f"Colorado Springs, CO 80907\n"
+            f"\n"
+            f"The Nuptial Mass is expected to conclude around 2:45 PM.\n"
+            f"\n"
+            f"Dress Code\n"
+            f"We kindly ask guests to dress in attire appropriate for a Catholic wedding.\n"
+            f"\n"
+            f"Women: Long dresses or skirts are encouraged with modest style choices. Shoulders may "
+            f"be uncovered, but we ask that spaghetti straps or strapless dresses be paired with a "
+            f"sweater, shawl, or similar cover.\n"
+            f"Men: Dress shirt with a collar and tie; jacket is optional.\n"
+            f"\n"
+            f"Please visit the FAQ section of our wedding website for attire examples.\n"
+            f"\n"
+            f"Reception\n"
+            f"4:45 PM\n"
+            f"Red Rocks Barn\n"
+            f"2700 Robinson St\n"
+            f"Colorado Springs, CO 80904\n"
+            f"\n"
+            f"The reception will include a cocktail hour with appetizers from 4:45–6:00 PM, followed "
+            f"by a buffet dinner and dancing.\n"
+            f"\n"
+            f"{rsvp_block}"
+            f"\n"
+            f"For the most up-to-date information, directions, FAQs, and other wedding details, "
+            f"please visit our website:\n"
+            f"\n"
+            f"https://anna-aaron-wedding.fly.dev\n"
+            f"\n"
+            f"We are so grateful for your love and support and hope you'll be able to celebrate "
+            f"with us!\n"
+            f"\n"
+            f"With love,\n"
+            f"\n"
+            f"Anna & Aaron"
+        )
 
     return (
         f"Dear {guest_name},\n"
         f"\n"
-        f"You are cordially invited to the wedding of Anna & Aaron!\n"
+        f"You are cordially invited to celebrate the wedding of Anna Pauline Hagen and Aaron Joseph "
+        f"Berkhoff on Saturday, November 21, 2026.\n"
         f"\n"
-        f"Please RSVP at the link below:\n"
-        f"  {link}\n"
+        f"Nuptial Mass\n"
+        f"1:30 PM (begins promptly)\n"
+        f"Corpus Christi Catholic Parish\n"
+        f"2318 N Cascade Ave\n"
+        f"Colorado Springs, CO 80907\n"
         f"\n"
-        f"Your invite code: {code}\n"
-        f"{party_line}"
+        f"The Nuptial Mass is expected to conclude around 2:45 PM.\n"
         f"\n"
-        f"We look forward to celebrating with you.\n"
+        f"Dress Code\n"
+        f"We kindly ask guests to dress in attire appropriate for a Catholic wedding.\n"
+        f"\n"
+        f"Women: Long dresses or skirts are encouraged with modest style choices. Shoulders may be "
+        f"uncovered, but we ask that spaghetti straps or strapless dresses be paired with a sweater, "
+        f"shawl, or similar cover.\n"
+        f"Men: Dress shirt with a collar and slacks (no jeans); jacket and/or tie optional.\n"
+        f"\n"
+        f"Please visit the FAQ section of our wedding website for attire examples.\n"
+        f"\n"
+        f"Reception\n"
+        f"4:45 PM\n"
+        f"Red Rocks Barn\n"
+        f"2700 Robinson St\n"
+        f"Colorado Springs, CO 80904\n"
+        f"\n"
+        f"The reception will include a cocktail hour with appetizers from 4:45–6:00 PM, followed by "
+        f"a buffet dinner and dancing.\n"
+        f"\n"
+        f"{rsvp_block}"
+        f"\n"
+        f"For the most up-to-date information, directions, FAQs, and other wedding details, please "
+        f"visit our website:\n"
+        f"\n"
+        f"https://anna-aaron-wedding.fly.dev\n"
+        f"\n"
+        f"We are so grateful for your love and support and hope you'll be able to celebrate with us!\n"
         f"\n"
         f"With love,\n"
+        f"\n"
         f"Anna & Aaron"
     )
 
 
-def send_email(smtp_cfg: dict, to_email: str, subject: str, body: str):
-    msg = MIMEText(body)
+_HTML_WRAPPER = """\
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700\
+&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:{champagne};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+           style="background:{champagne};">
+      <tr>
+        <td align="center" style="padding:28px 12px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+                 style="max-width:600px;width:100%;background:{cream};">
+            <tr>
+              <td style="background:{champagne};text-align:center;padding:44px 24px 28px;">
+                <p style="margin:0 0 18px;font-family:{sans};font-size:11px;letter-spacing:4px;
+                          text-transform:uppercase;color:{gold};">
+                  November 21, 2026 &middot; Colorado Springs, CO
+                </p>
+                <p style="margin:0 0 20px;font-family:{script};font-size:54px;line-height:1;
+                          color:{charcoal};">
+                  Anna &amp; Aaron
+                </p>
+                <table role="presentation" align="center" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="width:60px;border-top:1px solid {gold};font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="padding:0 12px;color:{gold};font-size:13px;">&#10022;</td>
+                    <td style="width:60px;border-top:1px solid {gold};font-size:0;line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 40px 8px;font-family:{sans};font-size:15px;
+                         color:{charcoal};line-height:1.7;">
+{content}
+              </td>
+            </tr>
+            <tr>
+              <td style="background:{charcoal};text-align:center;padding:34px 24px;">
+                <p style="margin:0 0 8px;font-family:{script};font-size:26px;color:{ivory};">
+                  Anna &amp; Aaron
+                </p>
+                <p style="margin:0;font-family:{sans};font-size:10px;letter-spacing:2px;
+                          text-transform:uppercase;color:#c9c3b8;">
+                  November 21, 2026 &middot; Corpus Christi Catholic Church &middot; Colorado Springs, CO
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+""".format(champagne=CHAMPAGNE, cream=CREAM, charcoal=CHARCOAL, gold=GOLD, ivory=IVORY,
+           script=FONT_SCRIPT, sans=FONT_SANS, content="{content}")
+
+
+def _label(text: str) -> str:
+    return (
+        f'<p style="margin:26px 0 6px;font-family:{FONT_SANS};font-size:11px;'
+        f'letter-spacing:3px;text-transform:uppercase;color:{GOLD};font-weight:600;">'
+        f"{html.escape(text)}</p>"
+    )
+
+
+def _event(time_text: str, venue_lines: list[str], note: str | None = None) -> str:
+    venue_html = "<br>".join(html.escape(line) for line in venue_lines)
+    note_html = (
+        f'<p style="margin:10px 0 0;font-family:{FONT_SANS};font-size:14px;'
+        f'color:{CHARCOAL_MUTED};line-height:1.6;">{note}</p>'
+        if note else ""
+    )
+    return (
+        f'<p style="margin:0 0 6px;font-family:{FONT_SERIF};font-size:21px;'
+        f'font-weight:700;color:{CHARCOAL};">{html.escape(time_text)}</p>'
+        f'<p style="margin:0;font-family:{FONT_SERIF};font-style:italic;font-size:15px;'
+        f'color:{CHARCOAL_MUTED};line-height:1.5;">{venue_html}</p>'
+        f"{note_html}"
+    )
+
+
+def _dress_code(men_line: str) -> str:
+    return (
+        f"{_label('Dress Code')}"
+        f'<p style="margin:0 0 12px;font-family:{FONT_SANS};font-size:15px;'
+        f'color:{CHARCOAL};line-height:1.7;">We kindly ask guests to dress in attire '
+        f"appropriate for a Catholic wedding.</p>"
+        f'<p style="margin:0;font-family:{FONT_SANS};font-size:15px;color:{CHARCOAL};'
+        f'line-height:1.7;"><strong>Women:</strong> Long dresses or skirts are encouraged '
+        f"with modest style choices. Shoulders may be uncovered, but we ask that spaghetti "
+        f"straps or strapless dresses be paired with a sweater, shawl, or similar cover."
+        f"<br><br><strong>Men:</strong> {men_line}</p>"
+        f'<p style="margin:14px 0 0;font-family:{FONT_SANS};font-size:13px;'
+        f'color:{CHARCOAL_MUTED};">Please visit the FAQ section of our wedding website '
+        f"for attire examples.</p>"
+    )
+
+
+def _rsvp_block(guest_name: str, party: list[str], code: str, base_url: str) -> str:
+    link = f"{base_url}/rsvp?code={code}"
+    return (
+        f'<div style="text-align:center;margin:32px 0 6px;">'
+        f'<p style="margin:0 0 16px;font-family:{FONT_SANS};font-size:14px;color:{CHARCOAL};">'
+        f"<strong>Please RSVP by September 4, 2026</strong></p>"
+        f'<a href="{link}" style="display:inline-block;background:{GOLD};color:{IVORY};'
+        f'font-family:{FONT_SANS};font-size:12px;letter-spacing:2px;text-transform:uppercase;'
+        f'text-decoration:none;padding:14px 42px;">RSVP Now</a>'
+        f'<p style="margin:16px 0 0;font-family:{FONT_SANS};font-size:13px;'
+        f'color:{CHARCOAL_MUTED};">Invite code: '
+        f'<strong style="color:{CHARCOAL};">{code}</strong></p>'
+        f"{_party_line_html(guest_name, party)}"
+        f"</div>"
+    )
+
+
+def _closing() -> str:
+    return (
+        f'<p style="margin:28px 0 0;font-family:{FONT_SANS};font-size:15px;color:{CHARCOAL};'
+        f'line-height:1.7;">For the most up-to-date information, directions, FAQs, and other '
+        f'wedding details, please visit our website:<br>'
+        f'<a href="https://anna-aaron-wedding.fly.dev" style="color:{GOLD};">'
+        f"https://anna-aaron-wedding.fly.dev</a></p>"
+        f'<p style="margin:20px 0 0;font-family:{FONT_SANS};font-size:15px;color:{CHARCOAL};'
+        f'line-height:1.7;">We are so grateful for your love and support and hope you\'ll '
+        f"be able to celebrate with us!</p>"
+        f'<p style="margin:20px 0 0;font-family:{FONT_SERIF};font-size:16px;color:{CHARCOAL};">'
+        f'With love,<br><span style="font-family:{FONT_SCRIPT};font-size:24px;">Anna &amp; Aaron'
+        f"</span></p>"
+    )
+
+
+def build_body_html(guest_name: str, party: list[str], code: str, base_url: str,
+                     rehearsal_invited: bool) -> str:
+    name_esc = html.escape(guest_name)
+    rsvp_block = _rsvp_block(guest_name, party, code, base_url)
+
+    if rehearsal_invited:
+        content = (
+            f'<p style="margin:0 0 20px;">Dear {name_esc},</p>'
+            f'<p style="margin:0 0 20px;">You are cordially invited to celebrate the '
+            f"rehearsal and wedding of <strong>Anna Pauline Hagen</strong> and "
+            f"<strong>Aaron Joseph Berkhoff</strong> on <strong>Friday, November 20</strong> "
+            f"and <strong>Saturday, November 21, 2026</strong>.</p>"
+            f"{_label('Friday, November 20 — Wedding Rehearsal')}"
+            f'{_event("6:30 PM", ["Corpus Christi Catholic Parish", "2318 N Cascade Ave", "Colorado Springs, CO 80907"], "Begins promptly; please arrive by 6:15 PM. The rehearsal is for the wedding party and the parents of the bride and groom, and is expected to conclude at 7:00 PM.")}'
+            f"{_label('Friday, November 20 — Rehearsal Dinner')}"
+            f'{_event("7:30 PM", ["MacKenzie\'s Chop House", "128 S Tejon St", "Colorado Springs, CO 80903"], "If you are not participating in the rehearsal, we look forward to welcoming you here beginning at 7:30 PM.")}'
+            f"{_label('Saturday, November 21 — Nuptial Mass')}"
+            f'{_event("1:30 PM", ["Corpus Christi Catholic Parish", "2318 N Cascade Ave", "Colorado Springs, CO 80907"], "Begins promptly; expected to conclude around 2:45 PM.")}'
+            f'{_dress_code("Dress shirt with a collar and tie; jacket is optional.")}'
+            f"{_label('Reception')}"
+            f'{_event("4:45 PM", ["Red Rocks Barn", "2700 Robinson St", "Colorado Springs, CO 80904"], "Cocktail hour with appetizers from 4:45–6:00 PM, followed by a buffet dinner and dancing.")}'
+            f"{rsvp_block}"
+            f"{_closing()}"
+        )
+    else:
+        content = (
+            f'<p style="margin:0 0 20px;">Dear {name_esc},</p>'
+            f'<p style="margin:0 0 20px;">You are cordially invited to celebrate the '
+            f"wedding of <strong>Anna Pauline Hagen</strong> and <strong>Aaron Joseph "
+            f"Berkhoff</strong> on <strong>Saturday, November 21, 2026</strong>.</p>"
+            f"{_label('Nuptial Mass')}"
+            f'{_event("1:30 PM", ["Corpus Christi Catholic Parish", "2318 N Cascade Ave", "Colorado Springs, CO 80907"], "Begins promptly; expected to conclude around 2:45 PM.")}'
+            f'{_dress_code("Dress shirt with a collar and slacks (no jeans); jacket and/or tie optional.")}'
+            f"{_label('Reception')}"
+            f'{_event("4:45 PM", ["Red Rocks Barn", "2700 Robinson St", "Colorado Springs, CO 80904"], "Cocktail hour with appetizers from 4:45–6:00 PM, followed by a buffet dinner and dancing.")}'
+            f"{rsvp_block}"
+            f"{_closing()}"
+        )
+
+    return _HTML_WRAPPER.format(content=content)
+
+
+def send_email(smtp_cfg: dict, to_email: str, subject: str, text_body: str, html_body: str):
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp_cfg["from"]
     msg["To"] = to_email
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(smtp_cfg["username"], smtp_cfg["password"])
@@ -191,11 +513,14 @@ def main():
             sent += 1
             continue
 
-        body = build_body(g["name"], g["party"], g["invite_code"], args.base_url)
+        text_body = build_body_text(g["name"], g["party"], g["invite_code"], args.base_url,
+                                     g["rehearsal_invited"])
+        html_body = build_body_html(g["name"], g["party"], g["invite_code"], args.base_url,
+                                     g["rehearsal_invited"])
         subject = "You're invited — Anna & Aaron's Wedding"
 
         try:
-            send_email(smtp_cfg, recipient, subject, body)
+            send_email(smtp_cfg, recipient, subject, text_body, html_body)
             if not args.test_to:
                 mark_sent(args.db, g["id"])
             sent += 1

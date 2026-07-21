@@ -143,12 +143,41 @@ def run_import(db_path: str, guests: list, dry_run: bool) -> list:
                 (g["invite_code"], g["first_name"], g["last_name"]),
             ).fetchone()
 
+            # Fall back to name-only match — handles a guest moved to a
+            # different party (invite code changed in the CSV).
+            if not existing:
+                by_name = cur.execute(
+                    "SELECT id FROM guests WHERE first_name = ? AND last_name = ?",
+                    (g["first_name"], g["last_name"]),
+                ).fetchall()
+                if len(by_name) == 1:
+                    existing = by_name[0]
+                    print(f"  MOVE {g['first_name']} {g['last_name']} → party {g['invite_code']}")
+                elif len(by_name) > 1:
+                    print(f"  SKIP {g['first_name']} {g['last_name']}: ambiguous name match",
+                          file=sys.stderr)
+                    skipped += 1
+                    continue
+
+            # Final fallback: same party + same first name — a corrected last name.
+            if not existing:
+                by_first = cur.execute(
+                    "SELECT id, last_name FROM guests WHERE invite_code = ? AND first_name = ?",
+                    (g["invite_code"], g["first_name"]),
+                ).fetchall()
+                if len(by_first) == 1:
+                    existing = by_first[0]
+                    print(f"  RENAME [{g['invite_code']}] {g['first_name']} "
+                          f"'{by_first[0][1]}' → '{g['last_name']}'")
+
             if existing:
                 cur.execute(
                     """UPDATE guests
-                       SET email=?, rehearsal_invited=?, updated_at=datetime('now')
+                       SET last_name=?, email=?, invite_code=?, rehearsal_invited=?,
+                           updated_at=datetime('now')
                        WHERE id=?""",
-                    (g["email"], g["rehearsal_invited"], existing[0]),
+                    (g["last_name"], g["email"], g["invite_code"],
+                     g["rehearsal_invited"], existing[0]),
                 )
                 updated += 1
             else:
