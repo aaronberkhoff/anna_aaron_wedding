@@ -1,7 +1,8 @@
 use crate::components::footer::Footer;
 use crate::components::nav::Nav;
 use crate::pages::{
-    gallery::Gallery, home::Home, hotel::Hotel, information::Information, rsvp::Rsvp,
+    dj_spike::DjSpike, gallery::Gallery, home::Home, hotel::Hotel, information::Information,
+    rsvp::Rsvp,
 };
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
@@ -26,6 +27,8 @@ pub fn App() -> impl IntoView {
                     // Old link — keep it working for anyone who bookmarked it
                     <Route path=path!("/itinerary") view=|| view! { <Redirect path="/information" /> } />
                     <Route path=path!("/gallery")  view=Gallery />
+                    // Phase 0 spike — throwaway, removed in Phase 1.
+                    <Route path=path!("/dj-spike") view=DjSpike />
                 </Routes>
             </main>
             <Footer />

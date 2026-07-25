@@ -1,3 +1,4 @@
+pub mod dj_spike;
 pub mod gallery;
 pub mod home;
 pub mod hotel;
