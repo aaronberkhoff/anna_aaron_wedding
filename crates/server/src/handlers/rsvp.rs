@@ -1,5 +1,5 @@
 use crate::{error::AppError, mail, state::AppState};
-use axum::{extract::State, Json};
+use axum::{extract::State, http::HeaderMap, Json};
 use shared::models::rsvp::{RsvpRecord, RsvpRequest, RsvpResponse};
 use uuid::Uuid;
 
@@ -83,7 +83,16 @@ pub async fn submit_rsvp(
     }))
 }
 
-pub async fn list_rsvps(State(state): State<AppState>) -> Result<Json<Vec<RsvpRecord>>, AppError> {
+pub async fn list_rsvps(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<RsvpRecord>>, AppError> {
+    let provided = headers.get("x-admin-key").and_then(|v| v.to_str().ok());
+    match (&state.config.admin_key, provided) {
+        (Some(expected), Some(provided)) if expected == provided => {}
+        _ => return Err(AppError::Unauthorized),
+    }
+
     let rows = sqlx::query!(
         r#"SELECT r.id, g.first_name, g.last_name, g.email,
                   r.attending_reception, r.attending_rehearsal,

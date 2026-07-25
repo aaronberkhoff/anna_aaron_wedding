@@ -97,5 +97,8 @@ Migrations live in `crates/server/migrations/`. The `.sqlx/` offline query cache
 | `SMTP_TO` | no | — | Comma-separated recipient(s) |
 | `SMTP_USERNAME` | no | — | SMTP auth username |
 | `SMTP_PASSWORD` | no | — | SMTP auth password |
+| `ADMIN_API_KEY` | no | — | Shared secret required (as `X-Admin-Key` header) to call `GET /api/rsvps` |
 
 All four `SMTP_*` vars must be set together; if any is missing, email notifications are silently disabled.
+
+If `ADMIN_API_KEY` is unset, `GET /api/rsvps` returns 401 for every request (fails closed rather than defaulting open).

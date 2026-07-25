@@ -5,6 +5,7 @@ pub struct Config {
     pub dist_dir: String,
     pub bind_addr: String,
     pub smtp: Option<SmtpConfig>,
+    pub admin_key: Option<String>,
 }
 
 pub struct SmtpConfig {
@@ -34,12 +35,18 @@ impl Config {
             }
         };
 
+        let admin_key = std::env::var("ADMIN_API_KEY").ok();
+        if admin_key.is_none() {
+            tracing::warn!("ADMIN_API_KEY not set — /api/rsvps is disabled");
+        }
+
         Ok(Config {
             database_url: std::env::var("DATABASE_URL")
                 .context("DATABASE_URL must be set (e.g. sqlite://wedding.db)")?,
             dist_dir: std::env::var("DIST_DIR").unwrap_or_else(|_| "site/dist".to_string()),
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
             smtp,
+            admin_key,
         })
     }
 }
