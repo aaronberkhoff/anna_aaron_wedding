@@ -125,6 +125,33 @@ def print_pending(con: sqlite3.Connection):
     print()
 
 
+def print_final_list(con: sqlite3.Connection):
+    rows = con.execute(
+        """SELECT invite_code, first_name, last_name, rsvp_status
+           FROM guests
+           ORDER BY invite_code, rowid"""
+    ).fetchall()
+    attending = sum(1 for _, _, _, status in rows if status == "attending")
+    print(f"Final Guest List ({len(rows)} total — {attending} attending, "
+          f"{len(rows) - attending} not attending)")
+
+    last_code = None
+    for code, first, last, status in rows:
+        if last_code is not None and code != last_code:
+            print()
+        last_code = code
+
+        if status == "attending":
+            mark, note = "✓", ""
+        elif status == "declined":
+            mark, note = "✗", "  (declined)"
+        else:
+            mark, note = "✗", "  (no response yet)"
+
+        print(f"  {mark} {first} {last}{note}  [{code or '—'}]")
+    print()
+
+
 def print_messages(con: sqlite3.Connection):
     rows = con.execute(
         """SELECT g.first_name, g.last_name, r.song_request, r.message
@@ -182,6 +209,7 @@ def main():
     print_response_breakdown(con)
     print_attendance(con)
     print_pending(con)
+    print_final_list(con)
     print_messages(con)
 
     print("Note: dietary restrictions aren't collected by the RSVP form today, "
