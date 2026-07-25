@@ -1,7 +1,7 @@
 use crate::components::footer::Footer;
 use crate::components::nav::Nav;
 use crate::pages::{
-    gallery::Gallery, home::Home, hotel::Hotel, information::Information, rsvp::Rsvp,
+    faq::Faq, gallery::Gallery, home::Home, hotel::Hotel, information::Information, rsvp::Rsvp,
 };
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
@@ -26,6 +26,7 @@ pub fn App() -> impl IntoView {
                     // Old link — keep it working for anyone who bookmarked it
                     <Route path=path!("/itinerary") view=|| view! { <Redirect path="/information" /> } />
                     <Route path=path!("/gallery")  view=Gallery />
+                    <Route path=path!("/faq")      view=Faq     />
                 </Routes>
             </main>
             <Footer />

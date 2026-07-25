@@ -1,3 +1,4 @@
+pub mod faq;
 pub mod gallery;
 pub mod home;
 pub mod hotel;
