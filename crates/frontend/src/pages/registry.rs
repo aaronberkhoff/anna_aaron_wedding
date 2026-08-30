@@ -1,6 +1,9 @@
 use crate::api::client;
 use leptos::prelude::*;
-use shared::{api::routes, models::registry::{ContributionRequest, ContributionResponse, RegistryFund}};
+use shared::{
+    api::routes,
+    models::registry::{ContributionRequest, ContributionResponse, RegistryFund},
+};
 
 const MYREGISTRY_URL: &str = "https://www.myregistry.com/wedding-registry/anna-hagen-and-aaron-berkhoff-colorado-springs-co/5369696/giftlist";
 const MYREGISTRY_PASSWORD: &str = "anna&aaron";
