@@ -10,12 +10,17 @@ already-contacted guests.
 Use --resend to re-email guests who were already contacted.
 Use --test to limit sending to test guests only (invite codes 0001/0002/0003).
 Use --test-to EMAIL to route all outgoing emails to one address.
+Use --last-call to send a final-reminder variant (updated Sept 5 deadline, urgency
+note up top) to guests who have not yet RSVP'd (rsvp_status = 'pending'), regardless
+of invite_sent. Does not touch the invite_sent flag.
 
 Usage:
   python scripts/send_invites.py --db wedding.db --dry-run
   python scripts/send_invites.py --db wedding.db
   python scripts/send_invites.py --db wedding.db --test --test-to you@example.com
   python scripts/send_invites.py --db wedding.db --resend
+  python scripts/send_invites.py --db wedding.db --last-call --dry-run
+  python scripts/send_invites.py --db wedding.db --last-call
 
 Required environment variables (when not --dry-run):
   SMTP_FROM       Sender address  (e.g. anna.aaron.wedding@gmail.com)
@@ -50,10 +55,13 @@ def parse_args():
                    help="Route all emails to this address instead of the real recipient")
     p.add_argument("--base-url", default="https://anna-aaron-wedding.fly.dev",
                    help="Base URL for the RSVP link (default: production URL)")
+    p.add_argument("--last-call", action="store_true",
+                   help="Send a final-reminder variant (Sept 5 deadline) to guests with "
+                        "rsvp_status='pending', regardless of invite_sent")
     return p.parse_args()
 
 
-def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
+def load_guests(db_path: str, resend: bool, test_only: bool, last_call: bool = False) -> list[dict]:
     """
     Return every guest who has an email address.
     Includes their party members' names so the email can mention them.
@@ -65,7 +73,8 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
     if test_only:
         placeholders = ",".join("?" * len(TEST_CODES))
         all_rows = con.execute(
-            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rehearsal_invited "
+            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rsvp_status, "
+            f"rehearsal_invited "
             f"FROM guests WHERE invite_code IN ({placeholders}) ORDER BY invite_code, rowid",
             TEST_CODES,
         ).fetchall()
@@ -73,7 +82,8 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
         # Exclude test guests from real sends — their fake addresses would bounce.
         placeholders = ",".join("?" * len(TEST_CODES))
         all_rows = con.execute(
-            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rehearsal_invited "
+            f"SELECT id, first_name, last_name, email, invite_code, invite_sent, rsvp_status, "
+            f"rehearsal_invited "
             f"FROM guests WHERE invite_code IS NOT NULL AND invite_code NOT IN ({placeholders}) "
             f"ORDER BY invite_code, rowid",
             TEST_CODES,
@@ -89,7 +99,11 @@ def load_guests(db_path: str, resend: bool, test_only: bool) -> list[dict]:
     for row in all_rows:
         if not row["email"]:
             continue
-        if row["invite_sent"] and not resend:
+        if last_call:
+            # Reminders go to non-responders only, irrespective of invite_sent.
+            if row["rsvp_status"] != "pending":
+                continue
+        elif row["invite_sent"] and not resend:
             continue
         guests.append({
             "id": row["id"],
@@ -140,20 +154,27 @@ def _party_line_html(guest_name: str, party: list[str]) -> str:
 
 
 def build_body_text(guest_name: str, party: list[str], code: str, base_url: str,
-                     rehearsal_invited: bool) -> str:
+                     rehearsal_invited: bool, last_call: bool = False) -> str:
     link = f"{base_url}/rsvp?code={code}"
+    deadline = "September 5, 2026" if last_call else "September 4, 2026"
     rsvp_block = (
-        f"Please RSVP by September 4, 2026 at the link below:\n"
+        f"{'LAST CALL — ' if last_call else ''}Please RSVP by {deadline} at the link below:\n"
         f"  {link}\n"
         f"\n"
         f"Your invite code: {code}\n"
         f"{_party_line_text(guest_name, party)}"
+    )
+    urgency_note = (
+        f"This is a final reminder — we have not yet received your RSVP, and the "
+        f"deadline is fast approaching.\n\n"
+        if last_call else ""
     )
 
     if rehearsal_invited:
         return (
             f"Dear {guest_name},\n"
             f"\n"
+            f"{urgency_note}"
             f"You are cordially invited to celebrate the rehearsal and wedding of Anna Pauline Hagen "
             f"and Aaron Joseph Berkhoff on Friday, November 20, and Saturday, November 21, 2026.\n"
             f"\n"
@@ -223,6 +244,7 @@ def build_body_text(guest_name: str, party: list[str], code: str, base_url: str,
     return (
         f"Dear {guest_name},\n"
         f"\n"
+        f"{urgency_note}"
         f"You are cordially invited to celebrate the wedding of Anna Pauline Hagen and Aaron Joseph "
         f"Berkhoff on Saturday, November 21, 2026.\n"
         f"\n"
@@ -372,12 +394,17 @@ def _dress_code(men_line: str) -> str:
     )
 
 
-def _rsvp_block(guest_name: str, party: list[str], code: str, base_url: str) -> str:
+def _rsvp_block(guest_name: str, party: list[str], code: str, base_url: str,
+                 last_call: bool = False) -> str:
     link = f"{base_url}/rsvp?code={code}"
+    deadline_label = (
+        "LAST CALL — Please RSVP by September 5, 2026" if last_call
+        else "Please RSVP by September 4, 2026"
+    )
     return (
         f'<div style="text-align:center;margin:32px 0 6px;">'
         f'<p style="margin:0 0 16px;font-family:{FONT_SANS};font-size:14px;color:{CHARCOAL};">'
-        f"<strong>Please RSVP by September 4, 2026</strong></p>"
+        f"<strong>{deadline_label}</strong></p>"
         f'<a href="{link}" style="display:inline-block;background:{GOLD};color:{IVORY};'
         f'font-family:{FONT_SANS};font-size:12px;letter-spacing:2px;text-transform:uppercase;'
         f'text-decoration:none;padding:14px 42px;">RSVP Now</a>'
@@ -405,14 +432,25 @@ def _closing() -> str:
     )
 
 
+def _urgency_banner() -> str:
+    return (
+        f'<p style="margin:0 0 20px;padding:14px 18px;background:{CHAMPAGNE};'
+        f'border-left:3px solid {GOLD};font-family:{FONT_SANS};font-size:14px;'
+        f'color:{CHARCOAL};line-height:1.6;">This is a final reminder — we have not '
+        f"yet received your RSVP, and the deadline is fast approaching.</p>"
+    )
+
+
 def build_body_html(guest_name: str, party: list[str], code: str, base_url: str,
-                     rehearsal_invited: bool) -> str:
+                     rehearsal_invited: bool, last_call: bool = False) -> str:
     name_esc = html.escape(guest_name)
-    rsvp_block = _rsvp_block(guest_name, party, code, base_url)
+    rsvp_block = _rsvp_block(guest_name, party, code, base_url, last_call=last_call)
+    urgency_banner = _urgency_banner() if last_call else ""
 
     if rehearsal_invited:
         content = (
             f'<p style="margin:0 0 20px;">Dear {name_esc},</p>'
+            f"{urgency_banner}"
             f'<p style="margin:0 0 20px;">You are cordially invited to celebrate the '
             f"rehearsal and wedding of <strong>Anna Pauline Hagen</strong> and "
             f"<strong>Aaron Joseph Berkhoff</strong> on <strong>Friday, November 20</strong> "
@@ -432,6 +470,7 @@ def build_body_html(guest_name: str, party: list[str], code: str, base_url: str,
     else:
         content = (
             f'<p style="margin:0 0 20px;">Dear {name_esc},</p>'
+            f"{urgency_banner}"
             f'<p style="margin:0 0 20px;">You are cordially invited to celebrate the '
             f"wedding of <strong>Anna Pauline Hagen</strong> and <strong>Aaron Joseph "
             f"Berkhoff</strong> on <strong>Saturday, November 21, 2026</strong>.</p>"
@@ -489,14 +528,19 @@ def main():
             )
             sys.exit(1)
 
-    guests = load_guests(args.db, resend=args.resend, test_only=args.test)
+    guests = load_guests(args.db, resend=args.resend, test_only=args.test, last_call=args.last_call)
 
     if not guests:
-        suffix = " (use --resend to re-send)" if not args.resend else ""
-        print(f"No guests to email{suffix}.")
+        if args.last_call:
+            print("No guests to email — everyone has already RSVP'd.")
+        else:
+            suffix = " (use --resend to re-send)" if not args.resend else ""
+            print(f"No guests to email{suffix}.")
         return
 
     mode = "[DRY RUN] " if args.dry_run else ""
+    if args.last_call:
+        mode += "[LAST CALL] "
     redirect = f" → {args.test_to}" if args.test_to else ""
     print(f"{mode}Sending to {len(guests)} guests{redirect}…\n")
 
@@ -514,14 +558,17 @@ def main():
             continue
 
         text_body = build_body_text(g["name"], g["party"], g["invite_code"], args.base_url,
-                                     g["rehearsal_invited"])
+                                     g["rehearsal_invited"], last_call=args.last_call)
         html_body = build_body_html(g["name"], g["party"], g["invite_code"], args.base_url,
-                                     g["rehearsal_invited"])
-        subject = "You're invited — Anna & Aaron's Wedding"
+                                     g["rehearsal_invited"], last_call=args.last_call)
+        subject = (
+            "Last Call: Please RSVP by September 5 — Anna & Aaron's Wedding" if args.last_call
+            else "You're invited — Anna & Aaron's Wedding"
+        )
 
         try:
             send_email(smtp_cfg, recipient, subject, text_body, html_body)
-            if not args.test_to:
+            if not args.test_to and not args.last_call:
                 mark_sent(args.db, g["id"])
             sent += 1
         except Exception as exc:

@@ -389,7 +389,7 @@ pub fn Rsvp() -> impl IntoView {
                             view! {
                                 <section class="flex flex-col gap-4">
                                     <h3 class="font-semibold text-charcoal uppercase tracking-wide text-sm border-b border-gold/40 pb-1">
-                                        "Rehearsal Dinner — November 19, 2026"
+                                        "Rehearsal Dinner — November 20, 2026"
                                     </h3>
                                     {members_reh.iter().enumerate().map(|(i, member)| {
                                         let name = member.full_name();
