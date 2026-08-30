@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT f.id as \"id!\", f.name as \"name!\", f.description as \"description!\",\n                  f.venmo_username as \"venmo_username!\",\n                  COALESCE(SUM(c.amount_usd), 0.0) as \"total_usd!: f64\"\n           FROM registry_funds f\n           LEFT JOIN fund_contributions c ON c.fund_id = f.id\n           GROUP BY f.id\n           ORDER BY f.name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "description!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "venmo_username!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_usd!: f64",
+        "ordinal": 4,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d783759cc9dffc23d418b72933c1bc0a2969967465fd82fd73f6597ad9b86596"
+}

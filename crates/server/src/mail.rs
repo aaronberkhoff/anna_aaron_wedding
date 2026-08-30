@@ -130,7 +130,7 @@ pub async fn send_rsvp_notification(
         We have received your RSVP for Anna & Aaron's wedding! Here is a summary:\n\
         \n\
         Reception (November 21, 2026):        {reception_str}\n\
-        Rehearsal Dinner (November 19, 2026): {rehearsal_str}\n\
+        Rehearsal Dinner (November 20, 2026): {rehearsal_str}\n\
         {party_line}\
         {seated_line}\
         {message_line}\

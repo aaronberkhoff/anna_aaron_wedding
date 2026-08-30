@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(amount_usd), 0.0) as \"total!: f64\"\n           FROM fund_contributions WHERE fund_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "total!: f64",
+        "ordinal": 0,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3510134e542122f7add2199851dc2ad440b1f3236b745b5be9a3f269122dcfda"
+}

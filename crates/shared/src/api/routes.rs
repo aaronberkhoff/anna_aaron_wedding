@@ -17,5 +17,8 @@ pub const SEATING_CHART: &str = "/api/tables/chart";
 
 pub const HOTELS_LIST: &str = "/api/hotels";
 
+pub const REGISTRY_FUNDS_LIST: &str = "/api/registry/funds";
+pub const REGISTRY_CONTRIBUTE: &str = "/api/registry/contribute";
+
 pub const PHOTOS_LIST: &str = "/api/photos";
 pub const PHOTOS_UPLOAD: &str = "/api/photos/upload";

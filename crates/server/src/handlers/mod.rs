@@ -2,6 +2,7 @@ pub mod guests;
 pub mod health;
 pub mod hotels;
 pub mod photos;
+pub mod registry;
 pub mod rsvp;
 pub mod tables;
 
@@ -24,5 +25,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/tables/chart", get(tables::seating_chart))
         .route("/api/hotels", get(hotels::list_hotels))
         .route("/api/photos", get(photos::list_photos))
+        .route("/api/registry/funds", get(registry::list_funds))
+        .route("/api/registry/contribute", post(registry::contribute))
         .with_state(state)
 }

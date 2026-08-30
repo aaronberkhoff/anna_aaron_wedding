@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT venmo_username FROM registry_funds WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "venmo_username",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5fa3672af6517d53e66079f5886d8db2caf49cfb40ef0bd1f30d966bf6ccd42c"
+}

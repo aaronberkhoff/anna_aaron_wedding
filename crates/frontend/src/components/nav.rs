@@ -15,6 +15,7 @@ pub fn Nav() -> impl IntoView {
                 <li><A href="/hotel">"Hotel"</A></li>
                 <li><A href="/information">"Information"</A></li>
                 <li><A href="/gallery">"Gallery"</A></li>
+                <li><A href="/registry">"Registry"</A></li>
                 <li><A href="/faq">"FAQ"</A></li>
             </ul>
         </nav>
