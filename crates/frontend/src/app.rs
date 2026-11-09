@@ -1,8 +1,8 @@
 use crate::components::footer::Footer;
 use crate::components::nav::Nav;
 use crate::pages::{
-    faq::Faq, gallery::Gallery, home::Home, hotel::Hotel, information::Information,
-    registry::Registry, rsvp::Rsvp,
+    bar_crawl::BarCrawl, drivers::Drivers, faq::Faq, gallery::Gallery, home::Home, hotel::Hotel,
+    information::Information, registry::Registry, rsvp::Rsvp, shuttle::Shuttle,
 };
 use leptos::prelude::*;
 use leptos_meta::provide_meta_context;
@@ -23,6 +23,10 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/")         view=Home    />
                     <Route path=path!("/rsvp")     view=Rsvp    />
                     <Route path=path!("/hotel")    view=Hotel   />
+                    <Route path=path!("/shuttle")  view=Shuttle />
+                    <Route path=path!("/bar-crawl") view=BarCrawl />
+                    // Unlisted driver guide — share the link with the bus company
+                    <Route path=path!("/drivers")  view=Drivers />
                     <Route path=path!("/information") view=Information />
                     // Old link — keep it working for anyone who bookmarked it
                     <Route path=path!("/itinerary") view=|| view! { <Redirect path="/information" /> } />

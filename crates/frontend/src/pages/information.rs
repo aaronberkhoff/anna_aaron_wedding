@@ -9,6 +9,12 @@ struct Event {
 
 const EVENTS: &[Event] = &[
     Event {
+        time: "12:45 PM",
+        title: "Shuttle to the Mass",
+        location: "SpringHill Suites Downtown",
+        description: "Shuttle buses leave the hotel block for the church (board from 12:35 PM)",
+    },
+    Event {
         time: "1:30 PM",
         title: "Nuptial Mass",
         location: "Corpus Christi Catholic Church",
@@ -19,8 +25,8 @@ const EVENTS: &[Event] = &[
         title: "Break",
         location: "Old Colorado City",
         description:
-            "Wedding party pictures. Guests are encouraged to head back to their lodging, \
-                      then join the bar crawl in Old Colorado City.",
+            "Wedding party pictures. Shuttle buses take guests from the church to the bar \
+             crawl in Old Colorado City (leaving by 3:00 PM).",
     },
     Event {
         time: "4:45 PM",
@@ -43,14 +49,17 @@ const EVENTS: &[Event] = &[
     Event {
         time: "9:00 PM",
         title: "Send-off",
-        description: "Exit from the venue \u{2014} shuttle bus back to the hotels",
+        description: "Exit from the venue \u{2014} shuttle buses back to the hotel block \
+                      (leaving by 9:10 PM)",
         location: "Red Rocks Barn",
     },
     Event {
         time: "9:30 PM",
         title: "After Party",
-        location: "Downtown Colorado Springs",
-        description: "Join us at Cowboys and Gasoline Alley",
+        location: "Cowboys \u{00b7} 25 N Tejon St",
+        description:
+            "Walk from the hotel to Cowboys downtown. If the weather is nice, we\u{2019}ll \
+                      head across the street to Gasoline Alley later in the night.",
     },
 ];
 
@@ -113,37 +122,74 @@ pub fn Information() -> impl IntoView {
                 <ul class="list-disc list-inside space-y-1">
                     <li>"OCC Brewing"</li>
                     <li>"Mother Muff\u{2019}s"</li>
-                    <li>"Alchemy"</li>
                 </ul>
+                <p>
+                    "See the "
+                    <a href="/bar-crawl" class="text-sage underline hover:text-earth transition-colors">
+                        "bar crawl page"
+                    </a>
+                    " for addresses and the walking route."
+                </p>
             </Section>
 
             <Section title="Reception" subtitle="Red Rocks Barn">
                 <p>
                     "The reception at Red Rocks Barn starts at 4:45 PM and ends at 9:00 PM. "
-                    "A shuttle bus will run guests back to the hotels at the end of the night."
+                    "Shuttle buses pick up from the bar crawl at 4:30 PM and run guests back "
+                    "to the hotel block at the end of the night."
                 </p>
             </Section>
 
             <Section title="After Party" subtitle="Downtown Colorado Springs">
                 <p>
-                    "Keep the celebration going with us at Cowboys and Gasoline Alley in "
-                    "downtown Colorado Springs."
+                    "Keep the celebration going downtown! Once the shuttle drops you back at "
+                    "the hotel, walk up Tejon Street to "
+                    <a
+                        href="https://www.google.com/maps/search/?api=1&query=25+N+Tejon+St+Colorado+Springs+CO+80903"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sage underline hover:text-earth transition-colors"
+                    >
+                        "Cowboys (25 N Tejon St)"
+                    </a>
+                    " \u{2014} about a 10-minute walk from SpringHill Suites and even closer "
+                    "from the Hyatt Place."
+                </p>
+                <p>
+                    "After some time at Cowboys, if the weather is nice, we\u{2019}ll head across "
+                    "the street to "
+                    <a
+                        href="https://www.google.com/maps/search/?api=1&query=28+N+Tejon+St+Colorado+Springs+CO+80903"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sage underline hover:text-earth transition-colors"
+                    >
+                        "Gasoline Alley (28 N Tejon St)"
+                    </a>
+                    "."
                 </p>
             </Section>
 
-            <Section title="Getting Around" subtitle="Our Recommendation">
+            <Section title="Getting Around" subtitle="Shuttle Service">
                 <p>
-                    "After the Mass, we recommend heading back to your lodging and taking an Uber "
-                    "to your next destination. Our suggested plan for the day:"
+                    "Shuttle buses will take guests to every stop of the day, starting and ending "
+                    "at the SpringHill Suites hotel block. Our suggested plan for the day:"
                 </p>
                 <ol class="list-decimal list-inside space-y-1">
-                    <li>"Drive to the Mass"</li>
-                    <li>"Head back to your lodging after the Mass"</li>
-                    <li>"Uber to OCC Brewing and walk between the bars"</li>
-                    <li>"Walk to the reception from the last bar"</li>
-                    <li>"Take the shuttle back to the hotels"</li>
-                    <li>"Walk to Cowboys for the after party"</li>
+                    <li>"Take the 12:45 PM shuttle from SpringHill Suites to the Mass"</li>
+                    <li>"Ride the shuttle from the church to the bar crawl after the Mass"</li>
+                    <li>"Walk between the bars in Old Colorado City"</li>
+                    <li>"Catch the 4:30 PM shuttle on S 25th St to the reception"</li>
+                    <li>"Take the shuttle back to the hotel block after the reception"</li>
+                    <li>"Walk up Tejon St to Cowboys for the after party"</li>
                 </ol>
+                <p>
+                    "See the "
+                    <a href="/shuttle" class="text-sage underline hover:text-earth transition-colors">
+                        "shuttle schedule"
+                    </a>
+                    " for exact pick-up times and addresses."
+                </p>
             </Section>
 
             // ── Day-of schedule ────────────────────────────────────────────────
