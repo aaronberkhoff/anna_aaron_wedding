@@ -1,5 +1,6 @@
 use anyhow::Result;
-use axum::http::HeaderValue;
+use axum::http::{HeaderValue, StatusCode};
+use axum::routing::any;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::{
@@ -53,11 +54,13 @@ async fn main() -> Result<()> {
         .allow_headers(Any);
 
     let app = handlers::router(state)
+        // Unknown API paths are real 404s — don't hand API clients the SPA shell.
+        .route("/api/{*rest}", any(|| async { StatusCode::NOT_FOUND }))
         // Fallback: serve Leptos SPA. Any path not matched by API routes
-        // returns index.html so leptos_router handles client-side routing.
+        // returns index.html (with 200, so deep links and link previews work)
+        // and leptos_router handles client-side routing.
         .fallback_service(
-            ServeDir::new(&dist_dir)
-                .not_found_service(ServeFile::new(format!("{}/index.html", dist_dir))),
+            ServeDir::new(&dist_dir).fallback(ServeFile::new(format!("{}/index.html", dist_dir))),
         )
         .layer(cors)
         .layer(CompressionLayer::new())
