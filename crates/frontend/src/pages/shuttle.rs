@@ -78,7 +78,7 @@ const LEGS: &[Leg] = &[
         note: Some("Buses will pull over along the street parking on S 25th St \u{2014} look for them on the side of the road."),
     },
     Leg {
-        time: "8:45 PM \u{2014} departs by 9:10 PM",
+        time: "Departs 9:15 PM",
         title: "Reception to the Hotel",
         pickup: RED_ROCKS_BARN,
         dropoff: SPRINGHILL,

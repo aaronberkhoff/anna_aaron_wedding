@@ -81,7 +81,7 @@ const STEPS: &[Step] = &[
     Step::Drive {
         label: "Run 4",
         title: "Red Rocks Barn \u{2192} Hotel",
-        timing: "At Barn by 8:45 PM \u{00b7} Depart no later than 9:10 PM",
+        timing: "At Barn by 8:45 PM \u{00b7} Depart 9:15 PM",
         from: &RED_ROCKS_BARN,
         to: &SPRINGHILL,
         notes: &["Take guests back to the SpringHill Suites hotel block."],
@@ -263,7 +263,7 @@ pub fn Drivers() -> impl IntoView {
                         <GlanceRow time="12:35 PM" what="At SpringHill Suites (leave 12:45)" />
                         <GlanceRow time="2:30 PM" what="In lot behind Corpus Christi (leave by 3:00)" />
                         <GlanceRow time="4:30 PM" what="Pick up at 110 S 25th St \u{2192} Red Rocks Barn" />
-                        <GlanceRow time="8:45 PM" what="At Red Rocks Barn (leave by 9:10 \u{2192} hotel)" />
+                        <GlanceRow time="8:45 PM" what="At Red Rocks Barn (leave 9:15 \u{2192} hotel)" />
                         <GlanceRow time="9:45 PM" what="Back at Red Rocks Barn \u{2192} final run to hotel" />
                     </tbody>
                 </table>

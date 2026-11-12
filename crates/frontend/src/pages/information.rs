@@ -29,7 +29,7 @@ const EVENTS: &[Event] = &[
              crawl in Old Colorado City (leaving by 3:00 PM).",
     },
     Event {
-        time: "4:45 PM",
+        time: "4:30 PM",
         title: "Reception",
         location: "Red Rocks Barn",
         description: "Anna and Aaron will welcome guests for cocktail hour",
@@ -41,20 +41,20 @@ const EVENTS: &[Event] = &[
         location: "Red Rocks Barn",
     },
     Event {
-        time: "7:15 PM",
+        time: "7:00 PM",
         title: "First Dance",
         location: "Red Rocks Barn",
-        description: "First dance and opening the dance floor",
+        description: "First dance \u{2014} the dance floor opens at 7:15 PM",
     },
     Event {
         time: "9:00 PM",
         title: "Send-off",
         description: "Exit from the venue \u{2014} shuttle buses back to the hotel block \
-                      (leaving by 9:10 PM)",
+                      (shuttle departs at 9:15 PM)",
         location: "Red Rocks Barn",
     },
     Event {
-        time: "9:30 PM",
+        time: "10:00 PM",
         title: "After Party",
         location: "Cowboys \u{00b7} 25 N Tejon St",
         description:
@@ -103,8 +103,9 @@ pub fn Information() -> impl IntoView {
                 </p>
                 <p>
                     "Later that evening, an informal welcome party will be held at Atomic Cowboy in "
-                    "downtown Colorado Springs. It\u{2019}s a great chance for guests to meet and "
-                    "mingle."
+                    "downtown Colorado Springs, starting at 7:00 PM. It\u{2019}s a great chance for guests "
+                    "to meet and mingle, and the wedding party will join around 9:00 PM after the "
+                    "rehearsal dinner."
                 </p>
             </Section>
 
@@ -134,7 +135,7 @@ pub fn Information() -> impl IntoView {
 
             <Section title="Reception" subtitle="Red Rocks Barn">
                 <p>
-                    "The reception at Red Rocks Barn starts at 4:45 PM and ends at 9:00 PM. "
+                    "The reception at Red Rocks Barn starts at 4:30 PM and ends at 9:00 PM. "
                     "Shuttle buses pick up from the bar crawl at 4:30 PM and run guests back "
                     "to the hotel block at the end of the night."
                 </p>
