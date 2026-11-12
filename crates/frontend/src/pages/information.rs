@@ -102,7 +102,7 @@ pub fn Information() -> impl IntoView {
                     ". The dinner is reserved for members of the wedding party and family."
                 </p>
                 <p>
-                    "Later that evening, an informal welcome party will be held at COATI in "
+                    "Later that evening, an informal welcome party will be held at Atomic Cowboy in "
                     "downtown Colorado Springs. It\u{2019}s a great chance for guests to meet and "
                     "mingle."
                 </p>
